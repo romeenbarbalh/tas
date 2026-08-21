@@ -1,0 +1,194 @@
+---
+interface Props {
+  locale: "fr" | "en";
+  t: (key: string) => string;
+}
+const { locale, t } = Astro.props;
+---
+
+<!--
+  Full-page scroll-scrubbed video hero (scroll-world technique):
+  the 8s intro clip plays forward/reverse as the visitor scrolls through a
+  ~3-viewport tall band, while the copy stays pinned on top and fades out.
+-->
+<section id="home" class="relative bg-black" style="height: 300vh; height: 300svh" aria-label="The Ark Studio - Accueil">
+  <div id="sw-stage" class="sticky top-0 overflow-hidden bg-black" style="height: 100vh; height: 100svh">
+    <!-- Media layer -->
+    <div class="absolute inset-0 z-0" aria-hidden="true">
+      <img id="sw-poster" src="/images/hero-poster.svg" alt="" class="w-full h-full object-cover" loading="eager" fetchpriority="high" />
+      <div id="sw-video-wrap"></div>
+    </div>
+
+    <!-- Legibility glow (video stays full-bleed; copy stays readable) -->
+    <div class="absolute inset-0 z-[1] pointer-events-none" aria-hidden="true">
+      <div class="absolute inset-x-0 top-0 h-36 bg-gradient-to-b from-black/90 to-transparent"></div>
+      <div class="absolute inset-x-0 bottom-0 h-44 bg-gradient-to-t from-black/90 to-transparent"></div>
+      <div class="absolute inset-0 bg-[radial-gradient(closest-side_at_50%_42%,rgba(0,0,0,0.85)_0%,rgba(0,0,0,0.5)_50%,rgba(0,0,0,0)_80%)]"></div>
+    </div>
+
+    <!-- Content -->
+    <div id="sw-content" class="absolute inset-0 z-10 flex flex-col items-center justify-center text-center px-6 pointer-events-none">
+      <h1 class="heading-xl text-white mb-5">The Ark Studio</h1>
+      <p class="text-lg md:text-xl text-white/70 max-w-2xl mx-auto mb-10 text-balance">{t("hero.tagline")}</p>
+      <div class="flex flex-col sm:flex-row items-center justify-center gap-4 pointer-events-auto">
+        <a href="#booking" class="btn-primary w-full sm:w-auto text-lg px-8 py-4">
+          {t("hero.cta")}
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+        </a>
+        <a href="#services" class="btn w-full sm:w-auto text-lg px-8 py-4 text-white border border-white/30 hover:bg-white/10 transition-all duration-200">
+          {t("nav.services")}
+        </a>
+      </div>
+      <div id="sw-hint" class="mt-14 inline-flex flex-col items-center gap-2 text-white/60">
+        <span class="text-xs font-medium uppercase tracking-wider">{t("hero.scroll")}</span>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="animate-bounce"><path d="M12 5v14M19 12l-7 7-7-7"></path></svg>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  #sw-video-wrap {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    transition: opacity 0.6s ease;
+  }
+  #sw-poster {
+    transition: opacity 0.6s ease;
+  }
+  #sw-stage.is-painted #sw-video-wrap {
+    opacity: 1;
+  }
+  #sw-stage.is-painted #sw-poster {
+    opacity: 0;
+  }
+</style>
+
+<script>
+  // Full-page scroll-scrub (scroll-world engine technique).
+  (function () {
+    const stage = document.getElementById("sw-stage");
+    const poster = document.getElementById("sw-poster");
+    const wrap = document.getElementById("sw-video-wrap");
+    const content = document.getElementById("sw-content");
+    const hint = document.getElementById("sw-hint");
+    const section = document.getElementById("home");
+    if (!stage || !wrap || !content || !section) return;
+
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const coarse = window.matchMedia("(hover: none) and (pointer: coarse)").matches;
+
+    const video = document.createElement("video");
+    video.muted = true;
+    video.playsInline = true;
+    video.preload = "auto";
+    video.setAttribute("muted", "");
+    video.setAttribute("playsinline", "");
+    video.setAttribute("aria-hidden", "true");
+    video.className = "absolute inset-0 w-full h-full object-cover";
+    wrap.appendChild(video);
+
+    let ready = false;
+    let cur = 0;
+    let target = 0;
+
+    // Load the clip as a Blob — a blob URL is always fully seekable, so the
+    // scrub works even when the host doesn't serve HTTP byte-range requests.
+    if (!reduce) {
+      fetch("/videos/intro_1.mp4")
+        .then((r) => (r.ok ? r.blob() : Promise.reject(new Error("404"))))
+        .then((blob) => {
+          video.src = URL.createObjectURL(blob);
+          video.addEventListener("loadedmetadata", () => {
+            ready = true;
+          });
+          // Keep the still as the live poster until the video actually paints a
+          // frame (iOS shows a blank scene for seeked-but-never-played video).
+          video.addEventListener(
+            "seeked",
+            () => {
+              if (!stage.classList.contains("is-painted")) {
+                stage.classList.add("is-painted");
+              }
+            },
+            { once: true }
+          );
+          video.addEventListener("loadeddata", () => {
+            try { video.pause(); } catch (e) {}
+          });
+          video.load();
+        })
+        .catch(() => {
+          // Video unavailable -> the poster stays, page still works.
+        });
+    }
+
+    let band = 0;
+    function measure() {
+      band = Math.max(0, section.offsetHeight - window.innerHeight);
+    }
+
+    function scrub() {
+      const rect = section.getBoundingClientRect();
+      const y = Math.min(Math.max(-rect.top, 0), band);
+      target = band > 0 ? y / band : 0;
+      // Copy pinned on top, fades up and out as the clip plays through.
+      const op = Math.max(0, 1 - target * 1.4);
+      content.style.opacity = op.toFixed(3);
+      content.style.pointerEvents = op > 0.5 ? "auto" : "none";
+      content.style.transform = "translateY(" + (-target * 60).toFixed(1) + "px)";
+      if (hint) hint.style.opacity = Math.max(0, 1 - target * 6).toFixed(3);
+    }
+
+    function raf() {
+      if (ready && video.duration) {
+        cur += (target - cur) * (coarse ? 0.25 : 0.18);
+        const t = Math.min(Math.max(cur, 0), 0.999) * video.duration;
+        // Coalesce: never queue a new seek while the decoder is still seeking,
+        // or fast flicks pile up and freeze the clip.
+        if (!video.seeking && Math.abs(video.currentTime - t) > (coarse ? 0.02 : 0.008)) {
+          try { video.currentTime = t; } catch (e) {}
+        }
+      }
+      requestAnimationFrame(raf);
+    }
+
+    // iOS: a muted video needs a user gesture before it will decode/paint. Prime
+    // it on the first touch so the first scroll seek isn't a blank frame.
+    let userReady = false;
+    function prime() {
+      if (userReady) return;
+      userReady = true;
+      try {
+        const p = video.play();
+        if (p && p.then) p.then(() => { try { video.pause(); } catch (e) {} }).catch(() => {});
+      } catch (e) {}
+    }
+    if (coarse) {
+      window.addEventListener("pointerdown", prime, { once: true, passive: true });
+      window.addEventListener("touchstart", prime, { once: true, passive: true });
+    }
+
+    let ticking = false;
+    window.addEventListener(
+      "scroll",
+      () => {
+        if (!ticking) {
+          ticking = true;
+          requestAnimationFrame(() => {
+            scrub();
+            ticking = false;
+          });
+        }
+      },
+      { passive: true }
+    );
+    window.addEventListener("resize", () => { measure(); scrub(); }, { passive: true });
+    window.addEventListener("orientationchange", () => { measure(); scrub(); });
+
+    measure();
+    scrub();
+    requestAnimationFrame(raf);
+  })();
+</script>

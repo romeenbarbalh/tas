@@ -1,0 +1,27 @@
+---
+interface Props {
+  locale: "fr" | "en";
+  t: (key: string) => string;
+}
+const { locale, t } = Astro.props;
+import { services, team } from "../../utils/constants";
+import BookingForm from "../ui/BookingForm.tsx";
+---
+
+<section id="booking" class="section bg-bg-elevated/30" aria-labelledby="booking-title">
+  <div class="container">
+    <header class="text-center max-w-2xl mx-auto mb-12">
+      <h2 id="booking-title" class="heading-lg mb-4">{t("booking.title")}</h2>
+      <p class="text-body">{t("booking.subtitle")}</p>
+    </header>
+
+    <div class="max-w-2xl mx-auto">
+      <BookingForm
+        client:visible
+        locale={locale}
+        services={services}
+        team={team}
+      />
+    </div>
+  </div>
+</section>

@@ -1,0 +1,24 @@
+---
+interface Props {
+  locale: "fr" | "en";
+  t: (key: string) => string;
+}
+const { locale, t } = Astro.props;
+import { team } from "../../utils/constants";
+import TeamCard from "../ui/TeamCard.astro";
+---
+
+<section id="team" class="section bg-bg-elevated/30" aria-labelledby="team-title">
+  <div class="container">
+    <header class="text-center max-w-2xl mx-auto mb-12">
+      <h2 id="team-title" class="heading-lg mb-4">{t("team.title")}</h2>
+      <p class="text-body">{t("team.subtitle")}</p>
+    </header>
+
+    <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      {team.map((member, idx) => (
+        <TeamCard member={member} locale={locale} index={idx} />
+      ))}
+    </div>
+  </div>
+</section>

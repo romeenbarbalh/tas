@@ -1,0 +1,99 @@
+---
+interface Props {
+  locale: "fr" | "en";
+  t: (key: string) => string;
+}
+const { locale, t } = Astro.props;
+import { services, categories } from "../../utils/constants";
+import ServiceCard from "../ui/ServiceCard.astro";
+---
+
+<section id="services" class="section" aria-labelledby="services-title">
+  <div class="container">
+    <header class="text-center max-w-2xl mx-auto mb-12">
+      <h2 id="services-title" class="heading-lg mb-4">{t("services.title")}</h2>
+      <p class="text-body">{t("services.subtitle")}</p>
+    </header>
+
+    <!-- Category Tabs -->
+    <div class="flex flex-wrap items-center justify-center gap-2 mb-10" role="tablist" aria-label={t("services.categories")}>
+      {categories.map((cat, i) => (
+        <button
+          role="tab"
+          aria-selected={i === 0}
+          aria-controls={`panel-${cat.id}`}
+          id={`tab-${cat.id}`}
+          data-category={cat.id}
+          class={`px-5 py-2.5 rounded-full text-sm font-medium transition-all ${
+            i === 0
+              ? "bg-gold text-bg shadow-lg shadow-gold/20"
+              : "bg-bg-elevated text-text-muted hover:text-text hover:bg-bg-card hover:border-gold/50 border border-border"
+          }`}
+        >
+          {cat.label[locale]}
+        </button>
+      ))}
+    </div>
+
+    <!-- Panels -->
+    <div class="space-y-8">
+      {categories.map((cat, i) => (
+        <div
+          role="tabpanel"
+          id={`panel-${cat.id}`}
+          aria-labelledby={`tab-${cat.id}`}
+          class={`${i !== 0 ? "hidden" : ""} animate-in`}
+          data-panel={cat.id}
+        >
+          <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {services
+              .filter(s => s.category === cat.id)
+              .map((service, idx) => (
+                <ServiceCard
+                  service={service}
+                  locale={locale}
+                  index={idx}
+                />
+              ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+</section>
+
+<script>
+  // Category tabs
+  const tabs = document.querySelectorAll('[data-category]');
+  const panels = document.querySelectorAll('[data-panel]');
+
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      const category = tab.dataset.category;
+      if (!category) return;
+
+      tabs.forEach(t => {
+        const isActive = t.dataset.category === category;
+        t.setAttribute('aria-selected', isActive.toString());
+        if (isActive) {
+          t.classList.add('bg-gold', 'text-bg', 'shadow-lg', 'shadow-gold/20');
+          t.classList.remove('bg-bg-elevated', 'text-text-muted', 'hover:text-text', 'hover:bg-bg-card', 'hover:border-gold/50', 'border', 'border-border');
+        } else {
+          t.classList.remove('bg-gold', 'text-bg', 'shadow-lg', 'shadow-gold/20');
+          t.classList.add('bg-bg-elevated', 'text-text-muted', 'hover:text-text', 'hover:bg-bg-card', 'hover:border-gold/50', 'border', 'border-border');
+        }
+      });
+
+      panels.forEach(p => {
+        const isActive = p.dataset.panel === category;
+        if (isActive) {
+          p.classList.remove('hidden');
+          p.classList.add('animate-in');
+        } else {
+          p.classList.add('hidden');
+          p.classList.remove('animate-in');
+        }
+      });
+    });
+  });
+</script>

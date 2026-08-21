@@ -1,0 +1,253 @@
+@import "tailwindcss";
+
+@theme {
+  /* Colors - Pure black & white */
+  --color-bg: #ffffff;
+  --color-bg-elevated: #f4f4f5;
+  --color-bg-card: #e9e9ec;
+  --color-border: #d4d4d8;
+  --color-border-light: #e4e4e7;
+
+  --color-gold: #111111;
+  --color-gold-light: #333333;
+  --color-gold-dark: #000000;
+  --color-gold-muted: #11111120;
+
+  --color-neon: #111111;
+  --color-neon-muted: #11111120;
+  --color-neon-glow: #11111180;
+
+  --color-text: #09090b;
+  --color-text-muted: #52525b;
+  --color-text-dim: #a1a1aa;
+
+  --color-error: #dc2626;
+  --color-success: #16a34a;
+
+  /* Fonts */
+  --font-display: "Syne", "Space Grotesk", system-ui, sans-serif;
+  --font-body: "Inter", system-ui, sans-serif;
+
+  /* Spacing scale */
+  --space-section: 6rem;
+  --space-section-lg: 8rem;
+
+  /* Container */
+  --container-max: 1280px;
+  --container-padding: 1.5rem;
+
+  /* Transitions */
+  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-base: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 400ms cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Z-index */
+  --z-sticky: 100;
+  --z-modal: 200;
+  --z-toast: 300;
+}
+
+@layer base {
+  :root {
+    color-scheme: light;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+
+  body {
+    @apply bg-bg text-text font-body antialiased;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display font-bold tracking-tight text-text;
+  }
+
+  ::selection {
+    @apply bg-gold text-bg;
+  }
+
+  /* Focus visible for accessibility */
+  :focus-visible {
+    @apply outline-none ring-2 ring-gold ring-offset-2 ring-offset-bg;
+  }
+
+  /* Scrollbar styling */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-bg;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-border-light rounded-full;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-gold/50;
+  }
+}
+
+@layer components {
+  .container {
+    @apply mx-auto max-w-[var(--container-max)] px-[var(--container-padding)];
+  }
+
+  .section {
+    @apply py-[var(--space-section)] md:py-[var(--space-section-lg)];
+  }
+
+  .input {
+    @apply w-full rounded-lg bg-bg-elevated border border-border px-4 py-3 text-text placeholder:text-text-dim transition-colors focus:border-gold focus:ring-2 focus:ring-gold/20 focus:outline-none;
+  }
+
+  .label {
+    @apply block mb-1.5 text-sm font-medium text-text-muted;
+  }
+
+  .card {
+    @apply rounded-2xl bg-bg-card border border-border overflow-hidden transition-all duration-300 hover:border-gold/30 hover:shadow-xl hover:shadow-gold/5;
+  }
+
+  .heading-xl {
+    @apply font-display text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight;
+  }
+
+  .heading-lg {
+    @apply font-display text-3xl md:text-4xl font-bold tracking-tight;
+  }
+
+  .heading-md {
+    @apply font-display text-2xl md:text-3xl font-bold tracking-tight;
+  }
+
+  .heading-sm {
+    @apply font-display text-xl md:text-2xl font-bold tracking-tight;
+  }
+
+  .text-body {
+    @apply text-base md:text-lg leading-relaxed text-text-muted;
+  }
+
+  .text-sm-body {
+    @apply text-sm md:text-base leading-relaxed text-text-muted;
+  }
+
+  /* Gradient text */
+  .text-gradient-gold {
+    @apply bg-gradient-to-r from-gold via-gold-light to-gold bg-clip-text text-transparent;
+  }
+
+  .text-gradient-neon {
+    @apply bg-gradient-to-r from-neon to-gold bg-clip-text text-transparent;
+  }
+
+  /* Gold divider */
+  .divider-gold {
+    @apply relative flex items-center gap-4;
+  }
+  .divider-gold::before,
+  .divider-gold::after {
+    @apply content-[""] flex-1 h-[1px] bg-gradient-to-r from-transparent via-gold/50 to-transparent;
+  }
+
+  /* Shimmer animation for loading states */
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+  .shimmer {
+    @apply relative overflow-hidden bg-bg-elevated;
+    background: linear-gradient(90deg, #1a1a1a 25%, #2a2a2a 50%, #1a1a1a 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+  }
+}
+
+@utility btn {
+  @apply inline-flex items-center justify-center gap-2 rounded-lg px-6 py-3 text-sm font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-2 focus-visible:ring-offset-bg disabled:opacity-50 disabled:cursor-not-allowed;
+}
+
+@utility badge {
+  @apply inline-flex items-center rounded-full px-3 py-1 text-xs font-medium;
+}
+
+.btn-primary {
+  @apply btn bg-gold text-bg hover:bg-gold-light active:bg-gold-dark shadow-lg shadow-gold/20;
+}
+
+.btn-secondary {
+  @apply btn bg-bg-elevated text-text border border-border hover:bg-bg-card hover:border-gold/50;
+}
+
+.btn-ghost {
+  @apply btn bg-transparent text-text-muted hover:text-text hover:bg-bg-elevated;
+}
+
+.badge-gold {
+  @apply badge bg-gold/10 text-gold border border-gold/20;
+}
+
+.badge-neon {
+  @apply badge bg-gold/10 text-gold border border-gold/20;
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .animate-in {
+    animation: animateIn 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  }
+
+  @keyframes animateIn {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .stagger-1 { animation-delay: 0.1s; }
+  .stagger-2 { animation-delay: 0.2s; }
+  .stagger-3 { animation-delay: 0.3s; }
+  .stagger-4 { animation-delay: 0.4s; }
+  .stagger-5 { animation-delay: 0.5s; }
+  .stagger-6 { animation-delay: 0.6s; }
+  .stagger-7 { animation-delay: 0.7s; }
+
+  .clip-text {
+    @apply bg-clip-text text-transparent;
+  }
+
+  .glass {
+    @apply bg-bg/80 backdrop-blur-xl border border-border-light;
+  }
+
+  .gold-glow {
+    box-shadow: 0 0 30px -5px var(--color-gold-glow), 0 0 60px -10px var(--color-gold-muted);
+  }
+
+  .neon-glow {
+    box-shadow: 0 0 20px -5px var(--color-neon-glow), 0 0 40px -10px var(--color-neon-muted);
+  }
+}

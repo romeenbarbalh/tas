@@ -1,0 +1,37 @@
+---
+interface Props {
+  locale: "fr" | "en";
+  t: (key: string) => string;
+}
+const { locale, t } = Astro.props;
+const isEn = locale === "en";
+import { salon } from "../../utils/constants";
+---
+
+<!-- Mobile Sticky CTA Bar -->
+<div class="fixed bottom-0 left-0 right-0 md:hidden z-[var(--z-sticky)] bg-bg/95 backdrop-blur-xl border-t border-border shadow-lg shadow-black/20 safe-area-bottom" role="navigation" aria-label="Actions rapides">
+  <div class="grid grid-cols-2">
+    <!-- Call Button -->
+    <a
+      href={`tel:${salon.phone.replace(/\s/g, "")}`}
+      class="flex flex-col items-center justify-center gap-1 p-3 text-text hover:text-gold transition-colors active:bg-bg-elevated"
+      aria-label={t("mobileCTA.call")}
+    >
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gold"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+      <span class="text-xs font-medium">{t("mobileCTA.call")}</span>
+    </a>
+
+    <!-- Book Button -->
+    <a
+      href="#booking"
+      class="flex flex-col items-center justify-center gap-1 p-3 bg-gold text-bg font-medium rounded-tl-xl transition-colors hover:bg-gold-light active:bg-gold-dark"
+      aria-label={t("mobileCTA.book")}
+    >
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+      <span class="text-xs">{t("mobileCTA.book")}</span>
+    </a>
+  </div>
+</div>
+
+<!-- Spacer to prevent content being hidden behind sticky bar -->
+<div class="md:hidden h-20" aria-hidden="true"></div>

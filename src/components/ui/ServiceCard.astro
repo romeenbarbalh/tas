@@ -1,0 +1,67 @@
+---
+interface Props {
+  service: {
+    id: string;
+    category: string;
+    name: { fr: string; en: string };
+    priceEur: string;
+    priceDzd: string;
+    duration: { fr: string; en: string };
+    description: { fr: string; en: string };
+  };
+  locale: "fr" | "en";
+  index: number;
+}
+const { service, locale, index } = Astro.props;
+const staggerClass = `stagger-${(index % 7) + 1}`;
+---
+
+<article class={`card group animate-in ${staggerClass}`}>
+  <div class="p-6">
+    <!-- Category Badge -->
+    <div class="mb-3">
+      <span class="badge-gold">{service.category === "men" ? "💈" : service.category === "women" ? "✨" : "🧵"} {service.category === "men" ? "Barbier" : service.category === "women" ? "Coiffure" : "Tresses"}</span>
+    </div>
+
+    <!-- Name & Price -->
+    <div class="flex items-start justify-between gap-4 mb-2">
+      <h3 class="heading-sm text-text group-hover:text-gold transition-colors">{service.name[locale]}</h3>
+      <span class="font-display font-bold text-lg text-gold whitespace-nowrap">{service.priceEur}</span>
+    </div>
+
+    <!-- Duration -->
+    <div class="flex items-center gap-4 mb-4 text-sm text-text-muted">
+      <span class="flex items-center gap-1.5">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+        {service.duration[locale]}
+      </span>
+    </div>
+
+    <!-- Description -->
+    <p class="text-sm text-text-muted mb-4 line-clamp-2">{service.description[locale]}</p>
+
+    <!-- Book Button -->
+    <a href="#booking" class="btn-secondary w-full justify-center group-hover:border-gold/50 group-hover:text-gold transition-all" data-service={service.id}>
+      {locale === "fr" ? "Réserver" : "Book"}
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+    </a>
+  </div>
+</article>
+
+<script>
+  document.querySelectorAll('[data-service]').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const serviceId = btn.getAttribute('data-service');
+      if (!serviceId) return;
+
+      const bookingSection = document.getElementById('booking');
+      if (bookingSection) {
+        bookingSection.scrollIntoView({ behavior: 'smooth' });
+        setTimeout(() => {
+          window.dispatchEvent(new CustomEvent('arc:select-service', { detail: serviceId }));
+        }, 500);
+      }
+    });
+  });
+</script>

@@ -1,0 +1,27 @@
+{
+  "name": "The Ark Studio",
+  "short_name": "The Ark Studio",
+  "description": "Salon de coiffure et barbier à Verviers - Hommes, femmes, enfants",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0a0a",
+  "theme_color": "#0a0a0a",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/images/logo.jpg",
+      "sizes": "192x192",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/images/logo.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["beauty", "lifestyle", "health"],
+  "lang": "fr-BE",
+  "dir": "ltr"
+}

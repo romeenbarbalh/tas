@@ -1,0 +1,61 @@
+---
+interface Props {
+  locale: "fr" | "en";
+  t: (key: string) => string;
+}
+const { locale, t } = Astro.props;
+import { salon } from "../../utils/constants";
+---
+
+<section id="about" class="section" aria-labelledby="about-title">
+  <div class="container">
+    <div class="grid lg:grid-cols-2 gap-12 items-center">
+      <!-- Content -->
+      <div class="max-w-xl">
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gold/10 text-gold text-sm font-medium mb-6 animate-in stagger-1">
+          <span class="relative flex h-2 w-2"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-gold/50 opacity-75"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-gold"></span></span>
+          {locale === "fr" ? "Salon de référence à Verviers" : "Premier salon in Verviers"}
+        </div>
+
+        <h2 id="about-title" class="heading-lg mb-6 animate-in stagger-2">{t("about.title")}</h2>
+        <p class="heading-sm text-gold mb-6 animate-in stagger-3">{t("about.subtitle")}</p>
+
+        <div class="prose prose-invert max-w-none animate-in stagger-4">
+          <p class="text-body mb-6">{salon.description[locale]}</p>
+        </div>
+
+        <!-- Values -->
+        <div class="grid sm:grid-cols-2 gap-4 mt-8 animate-in stagger-5">
+          {salon.values.map((value, i) => (
+            <div key={value.title} class="p-4 rounded-xl bg-bg-elevated border border-border hover:border-gold/30 transition-colors">
+              <h4 class="font-display font-semibold text-text mb-1">{value.title}</h4>
+              <p class="text-sm text-text-muted">{value.desc[locale]}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <!-- Image Placeholder -->
+      <div class="relative aspect-[4/5] rounded-2xl overflow-hidden bg-bg-card border border-border animate-in stagger-6">
+        <img
+          src="/images/about.svg"
+          alt={locale === "fr" ? "Intérieur du salon The Ark Studio" : "The Ark Studio interior"}
+          class="w-full h-full object-cover"
+          loading="lazy"
+        />
+        <div class="absolute inset-0 bg-gradient-to-t from-bg/60 to-transparent" aria-hidden="true"></div>
+        <div class="absolute bottom-6 left-6 right-6">
+          <div class="flex items-center gap-3 bg-bg/90 backdrop-blur-xl border border-border rounded-xl p-4 max-w-xs">
+            <div class="w-12 h-12 rounded-full bg-gold/20 flex items-center justify-center flex-shrink-0">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gold"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+            </div>
+            <div>
+              <p class="font-semibold text-text">{locale === "fr" ? "4.7 ⭐ Note globale" : "4.7 ⭐ Overall rating"}</p>
+              <p class="text-sm text-text-muted">{locale === "fr" ? "28 avis clients" : "28 customer reviews"}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>

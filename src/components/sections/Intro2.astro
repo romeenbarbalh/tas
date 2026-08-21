@@ -1,0 +1,124 @@
+---
+interface Props {
+  locale: "fr" | "en";
+  t: (key: string) => string;
+}
+const { locale, t } = Astro.props;
+const label = locale === "en" ? "Showcase" : "Réalisations";
+---
+
+<section class="relative bg-black" style="height: 250vh; height: 250svh" aria-label="The Ark Studio - Showcase">
+  <div class="i2-stage sticky top-0 overflow-hidden bg-black" style="height: 100vh; height: 100svh">
+    <div class="absolute inset-0 z-0" aria-hidden="true">
+      <div class="i2-poster absolute inset-0 bg-black"></div>
+      <div class="i2-video-wrap"></div>
+    </div>
+    <div class="absolute inset-0 z-[1] pointer-events-none" aria-hidden="true">
+      <div class="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/80 to-transparent"></div>
+    </div>
+    <div class="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
+      <p class="i2-label text-sm font-medium uppercase tracking-[0.2em] text-text-muted">{label}</p>
+    </div>
+  </div>
+</section>
+
+<style>
+  .i2-video-wrap {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    transition: opacity 0.6s ease;
+  }
+  .i2-poster {
+    transition: opacity 0.6s ease;
+  }
+  .i2-stage.is-painted .i2-video-wrap {
+    opacity: 1;
+  }
+  .i2-stage.is-painted .i2-poster {
+    opacity: 0;
+  }
+</style>
+
+<script>
+  (function () {
+    const section = document.querySelector('[aria-label="The Ark Studio - Showcase"]');
+    if (!section) return;
+    const stage = section.querySelector(".i2-stage");
+    const wrap = stage?.querySelector(".i2-video-wrap");
+    const poster = stage?.querySelector(".i2-poster");
+    const label = stage?.querySelector(".i2-label");
+    if (!stage || !wrap) return;
+
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const coarse = window.matchMedia("(hover: none) and (pointer: coarse)").matches;
+
+    const video = document.createElement("video");
+    video.muted = true;
+    video.playsInline = true;
+    video.preload = "auto";
+    video.setAttribute("muted", "");
+    video.setAttribute("playsinline", "");
+    video.setAttribute("aria-hidden", "true");
+    video.className = "absolute inset-0 w-full h-full object-cover";
+    wrap.appendChild(video);
+
+    let ready = false;
+    let cur = 0;
+    let target = 0;
+
+    if (!reduce) {
+      fetch("/videos/intro_2.mp4")
+        .then((r) => (r.ok ? r.blob() : Promise.reject(new Error("404"))))
+        .then((blob) => {
+          video.src = URL.createObjectURL(blob);
+          video.addEventListener("loadedmetadata", () => { ready = true; });
+          video.addEventListener("seeked", () => {
+            if (!stage.classList.contains("is-painted")) stage.classList.add("is-painted");
+          }, { once: true });
+          video.addEventListener("loadeddata", () => { try { video.pause(); } catch (e) {} });
+          video.load();
+        })
+        .catch(() => {});
+    }
+
+    let band = 0;
+    function measure() { band = Math.max(0, section.offsetHeight - window.innerHeight); }
+    function scrub() {
+      const rect = section.getBoundingClientRect();
+      const y = Math.min(Math.max(-rect.top, 0), band);
+      target = band > 0 ? y / band : 0;
+      if (label) label.style.opacity = Math.max(0, 1 - target * 3).toFixed(3);
+    }
+
+    function raf() {
+      if (ready && video.duration) {
+        cur += (target - cur) * (coarse ? 0.25 : 0.18);
+        const t = Math.min(Math.max(cur, 0), 0.999) * video.duration;
+        if (!video.seeking && Math.abs(video.currentTime - t) > (coarse ? 0.02 : 0.008)) {
+          try { video.currentTime = t; } catch (e) {}
+        }
+      }
+      requestAnimationFrame(raf);
+    }
+
+    let userReady = false;
+    function prime() {
+      if (userReady) return;
+      userReady = true;
+      try { const p = video.play(); if (p && p.then) p.then(() => { try { video.pause(); } catch (e) {} }).catch(() => {}); } catch (e) {}
+    }
+    if (coarse) {
+      window.addEventListener("pointerdown", prime, { once: true, passive: true });
+      window.addEventListener("touchstart", prime, { once: true, passive: true });
+    }
+
+    let ticking = false;
+    window.addEventListener("scroll", () => { if (!ticking) { ticking = true; requestAnimationFrame(() => { scrub(); ticking = false; }); } }, { passive: true });
+    window.addEventListener("resize", () => { measure(); scrub(); }, { passive: true });
+
+    measure();
+    scrub();
+    requestAnimationFrame(raf);
+  })();
+</script>

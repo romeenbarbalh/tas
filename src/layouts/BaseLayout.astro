@@ -1,0 +1,108 @@
+---
+interface Props {
+  title?: string;
+  description?: string;
+  image?: string;
+  url?: string;
+  locale: "fr" | "en";
+  type?: "website" | "article";
+}
+const { title, description, image, url, locale, type = "website" } = Astro.props;
+const isEn = locale === "en";
+import "../styles/global.css";
+import { generateSEO } from "../utils/seo";
+import { t as getT } from "../utils/i18n";
+
+const t = (key: string) => getT(locale, key);
+const seo = generateSEO({ title, description, image, url, locale, type });
+const canonicalUrl = isEn ? `https://thearkstudio.be/en${url || ""}` : `https://thearkstudio.be${url || ""}`;
+const alternateUrls = {
+  fr: `https://thearkstudio.be${url || ""}`,
+  en: `https://thearkstudio.be/en${url || ""}`,
+};
+---
+
+<!doctype html>
+<html lang={locale} class="scroll-smooth">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="generator" content={Astro.generator} />
+    <link rel="canonical" href={canonicalUrl} />
+    <link rel="alternate" hreflang="fr" href={alternateUrls.fr} />
+    <link rel="alternate" hreflang="en" href={alternateUrls.en} />
+    <link rel="alternate" hreflang="x-default" href={alternateUrls.fr} />
+
+    <!-- Primary Meta Tags -->
+    <title>{seo.title}</title>
+    <meta name="title" content={seo.title} />
+    <meta name="description" content={seo.description} />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content={seo.openGraph.type} />
+    <meta property="og:url" content={seo.openGraph.url} />
+    <meta property="og:title" content={seo.openGraph.title} />
+    <meta property="og:description" content={seo.openGraph.description} />
+    <meta property="og:site_name" content={seo.openGraph.siteName} />
+    <meta property="og:locale" content={seo.openGraph.locale} />
+    <meta property="og:locale:alternate" content={locale === "fr" ? "en_US" : "fr_BE"} />
+    {seo.openGraph.images.map((img) => (
+      <meta property="og:image" content={img.url} />
+    ))}
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content={seo.twitter.card} />
+    <meta name="twitter:title" content={seo.twitter.title} />
+    <meta name="twitter:description" content={seo.twitter.description} />
+    {seo.twitter.images.map((img) => (
+      <meta name="twitter:image" content={img} />
+    ))}
+
+    <!-- JSON-LD -->
+    <script type="application/ld+json" set:html={JSON.stringify(seo.jsonLd)}></script>
+
+    <!-- Fonts Preconnect -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Syne:wght@400;500;600;700;800&display=swap" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Syne:wght@400;500;600;700;800&display=swap" media="print" onload="this.media='all'" />
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+
+    <!-- Theme color -->
+    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+  </head>
+  <body class="bg-bg text-text font-body antialiased">
+    <!-- Reduced motion script (runs before paint) -->
+    <script is:inline>
+      (function() {
+        try {
+          var mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+          if (mediaQuery.matches) {
+            document.documentElement.classList.add('reduce-motion');
+          }
+          mediaQuery.addEventListener('change', function(e) {
+            document.documentElement.classList.toggle('reduce-motion', e.matches);
+          });
+        } catch (e) {}
+      })();
+    </script>
+
+    <slot />
+
+    <!-- Global styles -->
+    <style is:global>
+      @media (prefers-reduced-motion: reduce) {
+        .reduce-motion *,
+        .reduce-motion *::before,
+        .reduce-motion *::after {
+          animation-duration: 0.01ms !important;
+          animation-iteration-count: 1 !important;
+          transition-duration: 0.01ms !important;
+          scroll-behavior: auto !important;
+        }
+      }
+    </style>
+  </body>
+</html>

@@ -1,0 +1,92 @@
+---
+interface Props {
+  locale: "fr" | "en";
+  t: (key: string) => string;
+}
+const { locale, t } = Astro.props;
+import { salon, reviews } from "../../utils/constants";
+---
+
+<div class="bg-bg-elevated/50 border border-border rounded-2xl p-6 md:p-8" aria-labelledby="reviews-title">
+  <header class="mb-6">
+    <h3 id="reviews-title" class="heading-md mb-2">{t("reviews.title")}</h3>
+    <p class="text-sm text-text-muted">{t("reviews.subtitle")}</p>
+  </header>
+
+  <!-- Overall Rating -->
+  <div class="flex items-center gap-6 mb-8">
+    <div class="flex-shrink-0 text-center">
+      <div class="font-display font-bold text-5xl md:text-6xl text-text">{salon.rating.overall}</div>
+      <div class="flex items-center justify-center gap-1 mt-1">
+        {[1,2,3,4,5].map(i => (
+          <svg key={i} width="18" height="18" viewBox="0 0 24 24" fill="currentColor" class="text-gold"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+        ))}
+      </div>
+      <p class="text-sm text-text-muted mt-1">{salon.rating.count} {locale === "fr" ? "avis" : "reviews"}</p>
+    </div>
+
+    <!-- Breakdown Bars -->
+    <div class="flex-1 space-y-2">
+      {[
+        { key: "welcome", label: { fr: "Accueil", en: "Welcome" } },
+        { key: "cleanliness", label: { fr: "Propreté", en: "Cleanliness" } },
+        { key: "atmosphere", label: { fr: "Ambiance", en: "Atmosphere" } },
+        { key: "quality", label: { fr: "Qualité", en: "Quality" } },
+      ].map(item => {
+        const score = salon.rating.breakdown[item.key as keyof typeof salon.rating.breakdown];
+        const percent = (score / 5) * 100;
+        return (
+          <div class="h-8">
+            <div class="flex justify-between text-xs mb-1">
+              <span class="text-text-muted">{item.label[locale]}</span>
+              <span class="font-medium text-text">{score.toFixed(1)}</span>
+            </div>
+            <div class="h-2 bg-bg rounded-full overflow-hidden">
+              <div
+                class="h-full bg-gradient-to-r from-gold to-gold-light rounded-full transition-all duration-1000"
+                style={{ width: `${percent}%` }}
+                role="progressbar"
+                aria-valuenow={score}
+                aria-valuemin={0}
+                aria-valuemax={5}
+                aria-label={item.label[locale]}
+              ></div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  </div>
+
+  <!-- Sample Reviews -->
+  <div class="grid gap-4 md:grid-cols-3">
+    {reviews.map((review, idx) => (
+      <article key={review.id} class="card p-5 animate-in stagger-{idx + 1}">
+        <div class="flex items-center gap-1 mb-3">
+          {[1,2,3,4,5].map(i => (
+            <svg key={i} width="16" height="16" viewBox="0 0 24 24" fill="currentColor" class="text-gold"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+          ))}
+        </div>
+        <p class="text-sm text-text-muted mb-3">"{review.text[locale]}"</p>
+        <footer class="flex items-center gap-2 text-xs text-text-dim">
+          <span class="font-medium text-text">{review.author}</span>
+          <span>·</span>
+          <time dateTime={review.date}>{new Date(review.date).toLocaleDateString(locale, { day: 'numeric', month: 'long', year: 'numeric' })}</time>
+        </footer>
+      </article>
+    ))}
+  </div>
+
+  <!-- View All Link -->
+  <div class="text-center mt-6">
+    <a
+      href="https://www.google.com/maps/place/The+Ark+Studio/@50.5906,5.8628,17z/data=!4m8!3m7!1s0x47c0c8b8b8b8b8b8b:0xb8b8b8b8b8b8b8b8!8m2!3d50.5906!4d5.8628!9m1!1b1!16s%2Fg%2F11b8b8b8b8"
+      target="_blank"
+      rel="noopener noreferrer"
+      class="btn-ghost inline-flex items-center gap-2"
+    >
+      {t("reviews.readMore")}
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+    </a>
+  </div>
+</div>

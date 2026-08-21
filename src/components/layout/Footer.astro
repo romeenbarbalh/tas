@@ -1,0 +1,102 @@
+---
+interface Props {
+  locale: "fr" | "en";
+  t: (key: string) => string;
+}
+const { locale, t } = Astro.props;
+const isEn = locale === "en";
+import { salon } from "../../utils/constants";
+---
+
+<footer id="contact" class="bg-bg-elevated/50 border-t border-border" role="contentinfo">
+  <div class="container">
+    <div class="grid gap-8 md:grid-cols-2 lg:grid-cols-4 py-12 md:py-16">
+      <!-- Brand -->
+      <div class="lg:col-span-1">
+        <a href={isEn ? "/en/" : "/"} class="flex items-center gap-3 mb-6" aria-label={t("nav.home")}>
+          <span class="font-display font-bold text-2xl text-text">The Ark Studio</span>
+        </a>
+        <p class="text-sm text-text-muted leading-relaxed mb-6">{salon.description[locale]}</p>
+        <div class="flex items-center gap-4">
+          <a href={salon.instagram} target="_blank" rel="noopener noreferrer" class="p-2 rounded-lg bg-bg border border-border text-text-muted hover:text-gold hover:border-gold/50 transition-all" aria-label="Instagram principal">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="20" x="2" y="2" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg>
+          </a>
+          <a href={salon.instagramWomen} target="_blank" rel="noopener noreferrer" class="p-2 rounded-lg bg-bg border border-border text-text-muted hover:text-gold hover:border-gold/50 transition-all" aria-label="Instagram espace femmes">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="20" x="2" y="2" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg>
+          </a>
+        </div>
+      </div>
+
+      <!-- Address & Contact -->
+      <div>
+        <h3 class="heading-sm mb-4">{t("footer.address")}</h3>
+        <address class="not-italic text-sm text-text-muted leading-relaxed space-y-3">
+          <p>{salon.address}</p>
+          <div class="flex items-center gap-2">
+            <a href={`tel:${salon.phone.replace(/\s/g, "")}`} class="flex items-center gap-2 text-text-muted hover:text-gold transition-colors" aria-label={t("footer.phone")}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+              <span>{salon.phone}</span>
+            </a>
+          </div>
+          <div class="flex items-center gap-2">
+            <a href={`https://wa.me/${salon.phone.replace(/[\s+]/g, "")}`} target="_blank" rel="noopener noreferrer" class="flex items-center gap-2 text-text-muted hover:text-green-400 transition-colors" aria-label={t("footer.whatsapp")}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+              <span>{t("footer.whatsapp")}</span>
+            </a>
+          </div>
+          <div class="flex items-center gap-2">
+            <a href={`mailto:${salon.email}`} class="flex items-center gap-2 text-text-muted hover:text-gold transition-colors" aria-label={t("footer.email")}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"></rect><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path></svg>
+              <span>{salon.email}</span>
+            </a>
+          </div>
+        </address>
+      </div>
+
+      <!-- Hours -->
+      <div>
+        <h3 class="heading-sm mb-4">{t("footer.hours")}</h3>
+        <dl class="text-sm text-text-muted space-y-2">
+          <div class="flex justify-between gap-4"><dt>Lun</dt><dd class="text-text font-medium">10:00 – 20:00</dd></div>
+          <div class="flex justify-between gap-4"><dt>Mar</dt><dd class="text-text font-medium">{t("hours.closed")}</dd></div>
+          <div class="flex justify-between gap-4"><dt>Mer</dt><dd class="text-text font-medium">10:00 – 20:00</dd></div>
+          <div class="flex justify-between gap-4"><dt>Jeu</dt><dd class="text-text font-medium">10:00 – 20:00</dd></div>
+          <div class="flex justify-between gap-4"><dt>Ven</dt><dd class="text-text font-medium">10:00 – 21:00</dd></div>
+          <div class="flex justify-between gap-4"><dt>Sam</dt><dd class="text-text font-medium">10:00 – 21:00</dd></div>
+          <div class="flex justify-between gap-4"><dt>Dim</dt><dd class="text-text font-medium">13:00 – 20:00</dd></div>
+        </dl>
+      </div>
+
+      <!-- Map -->
+      <div>
+        <h3 class="heading-sm mb-4">{t("footer.map")}</h3>
+        <div class="rounded-xl overflow-hidden border border-border">
+          <iframe
+            title={isEn ? "The Ark Studio location on Google Maps" : "The Ark Studio sur Google Maps"}
+            src={`https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2526.5!2d5.8628!3d50.5906!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x47c0c8b8b8b8b8b8b%3A0xb8b8b8b8b8b8b8b8!2sRue%20de%20la%20Station%2023%2C%204800%20Verviers!5e0!3m2!1s${locale}!2sbe!4v1700000000000!5m2!1s${locale}!2sbe`}
+            width="100%"
+            height="200"
+            style="border:0;"
+            allowfullscreen=""
+            loading="lazy"
+            referrerpolicy="no-referrer-when-downgrade"
+          ></iframe>
+        </div>
+        <a href={`https://maps.google.com/?q=${encodeURIComponent(salon.address)}`} target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 mt-3 text-sm font-medium text-gold hover:text-gold-light transition-colors">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polygon points="12 6 12 12 16 14"></polygon></svg>
+          {t("footer.map")}
+        </a>
+      </div>
+    </div>
+
+    <!-- Bottom bar -->
+    <div class="flex flex-col md:flex-row items-center justify-between gap-4 py-6 border-t border-border">
+      <p class="text-sm text-text-dim">{t("footer.copyright")}</p>
+      <div class="flex items-center gap-6 text-sm text-text-dim">
+        <span>{salon.name}</span>
+        <span>·</span>
+        <span>Verviers, Belgium</span>
+      </div>
+    </div>
+  </div>
+</footer>

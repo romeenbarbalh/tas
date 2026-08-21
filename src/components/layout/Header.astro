@@ -1,0 +1,157 @@
+---
+interface Props {
+  locale: "fr" | "en";
+  t: (key: string) => string;
+}
+const { locale, t } = Astro.props;
+const isEn = locale === "en";
+import LanguageToggle from "../ui/LanguageToggle.tsx";
+---
+
+<header class="fixed top-0 left-0 right-0 z-[var(--z-sticky)] bg-bg/80 backdrop-blur-xl border-b border-border transition-all duration-300" data-header>
+  <div class="container">
+    <div class="flex items-center justify-between h-16 md:h-20 gap-4">
+      <!-- Brand -->
+      <a href={isEn ? "/en/" : "/"} class="flex items-center gap-3 shrink-0" aria-label={t("nav.home")}>
+        <span class="font-display font-bold text-xl md:text-2xl text-text tracking-tight">The Ark Studio</span>
+      </a>
+
+      <!-- Desktop Navigation -->
+      <nav class="hidden md:flex items-center gap-1" aria-label="Navigation principale">
+        <a href="#services" class="px-3 py-2 text-sm font-medium text-text-muted hover:text-text transition-colors">{t("nav.services")}</a>
+        <a href="#team" class="px-3 py-2 text-sm font-medium text-text-muted hover:text-text transition-colors">{t("nav.team")}</a>
+        <a href="#about" class="px-3 py-2 text-sm font-medium text-text-muted hover:text-text transition-colors">{t("nav.about")}</a>
+        <a href="#gallery" class="px-3 py-2 text-sm font-medium text-text-muted hover:text-text transition-colors">{t("nav.gallery")}</a>
+        <a href="#contact" class="px-3 py-2 text-sm font-medium text-text-muted hover:text-text transition-colors">{t("nav.contact")}</a>
+      </nav>
+
+      <!-- Right side: Language + Booking CTA + Mobile Menu -->
+      <div class="flex items-center gap-3 shrink-0">
+        <!-- Language Toggle -->
+        <LanguageToggle client:visible locale={locale} />
+
+        <!-- Booking CTA -->
+        <a href="#booking" class="hidden sm:inline-flex btn-primary text-sm">{t("hero.cta")}</a>
+
+        <!-- Mobile Menu Button -->
+        <button
+          class="md:hidden p-2 rounded-lg bg-bg-elevated border border-border text-text-muted hover:text-text hover:border-gold/50 transition-colors"
+          aria-label={isEn ? "Open menu" : "Ouvrir le menu"}
+          aria-expanded="false"
+          aria-controls="mobile-menu"
+          data-mobile-menu-toggle
+        >
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="menu-open-icon">
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <line x1="3" y1="12" x2="21" y2="12"></line>
+            <line x1="3" y1="18" x2="21" y2="18"></line>
+          </svg>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="menu-close-icon hidden">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mobile Menu Panel -->
+  <div id="mobile-menu" class="md:hidden fixed inset-0 z-[var(--z-modal)] bg-bg/95 backdrop-blur-xl transform translate-x-full transition-transform duration-300 ease-out" aria-hidden="true" data-mobile-menu-panel>
+    <div class="flex flex-col h-full p-6 md:p-8">
+      <div class="flex items-center justify-between mb-8">
+        <a href={isEn ? "/en/" : "/"} class="flex items-center gap-3" aria-label={t("nav.home")}>
+          <span class="font-display font-bold text-xl text-text">The Ark Studio</span>
+        </a>
+        <button
+          class="p-2 rounded-lg bg-bg-elevated border border-border text-text-muted hover:text-text hover:border-gold/50 transition-colors"
+          aria-label={isEn ? "Close menu" : "Fermer le menu"}
+          data-mobile-menu-close
+        >
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
+      <nav class="flex-1 flex flex-col gap-2" aria-label="Navigation mobile">
+        <a href="#services" class="px-4 py-3 text-lg font-medium text-text-muted hover:text-text hover:bg-bg-elevated rounded-xl transition-all" data-mobile-menu-link>{t("nav.services")}</a>
+        <a href="#team" class="px-4 py-3 text-lg font-medium text-text-muted hover:text-text hover:bg-bg-elevated rounded-xl transition-all" data-mobile-menu-link>{t("nav.team")}</a>
+        <a href="#about" class="px-4 py-3 text-lg font-medium text-text-muted hover:text-text hover:bg-bg-elevated rounded-xl transition-all" data-mobile-menu-link>{t("nav.about")}</a>
+        <a href="#gallery" class="px-4 py-3 text-lg font-medium text-text-muted hover:text-text hover:bg-bg-elevated rounded-xl transition-all" data-mobile-menu-link>{t("nav.gallery")}</a>
+        <a href="#contact" class="px-4 py-3 text-lg font-medium text-text-muted hover:text-text hover:bg-bg-elevated rounded-xl transition-all" data-mobile-menu-link>{t("nav.contact")}</a>
+      </nav>
+
+      <div class="pt-6 border-t border-border">
+        <a href="#booking" class="btn-primary w-full justify-center py-4 text-lg" data-mobile-menu-link>{t("hero.cta")}</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mobile Menu Overlay -->
+  <div class="md:hidden fixed inset-0 z-[var(--z-modal)] bg-black/50 opacity-0 invisible transition-all duration-300" aria-hidden="true" data-mobile-menu-overlay></div>
+</header>
+
+<script>
+  // Mobile menu toggle
+  const toggle = document.querySelector('[data-mobile-menu-toggle]');
+  const panel = document.querySelector('[data-mobile-menu-panel]');
+  const overlay = document.querySelector('[data-mobile-menu-overlay]');
+  const closeBtn = document.querySelector('[data-mobile-menu-close]');
+  const links = document.querySelectorAll('[data-mobile-menu-link]');
+  const openIcon = toggle?.querySelector('.menu-open-icon');
+  const closeIcon = toggle?.querySelector('.menu-close-icon');
+
+  function openMenu() {
+    panel?.classList.remove('translate-x-full');
+    panel?.classList.add('translate-x-0');
+    overlay?.classList.remove('opacity-0', 'invisible');
+    overlay?.classList.add('opacity-100', 'visible');
+    toggle?.setAttribute('aria-expanded', 'true');
+    panel?.setAttribute('aria-hidden', 'false');
+    openIcon?.classList.add('hidden');
+    closeIcon?.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeMenu() {
+    panel?.classList.add('translate-x-full');
+    panel?.classList.remove('translate-x-0');
+    overlay?.classList.add('opacity-0', 'invisible');
+    overlay?.classList.remove('opacity-100', 'visible');
+    toggle?.setAttribute('aria-expanded', 'false');
+    panel?.setAttribute('aria-hidden', 'true');
+    openIcon?.classList.remove('hidden');
+    closeIcon?.classList.add('hidden');
+    document.body.style.overflow = '';
+  }
+
+  toggle?.addEventListener('click', () => {
+    const isOpen = toggle.getAttribute('aria-expanded') === 'true';
+    isOpen ? closeMenu() : openMenu();
+  });
+
+  closeBtn?.addEventListener('click', closeMenu);
+  overlay?.addEventListener('click', closeMenu);
+  links.forEach(link => link.addEventListener('click', closeMenu));
+
+  // Header scroll effect
+  const header = document.querySelector('header[data-header]');
+  let lastScroll = 0;
+  window.addEventListener('scroll', () => {
+    const currentScroll = window.scrollY;
+    if (currentScroll > 20) {
+      header?.classList.add('bg-bg/95', 'shadow-lg', 'shadow-black/20');
+    } else {
+      header?.classList.remove('bg-bg/95', 'shadow-lg', 'shadow-black/20');
+    }
+    lastScroll = currentScroll;
+  }, { passive: true });
+</script>
+
+<style>
+  /* Ensure smooth transitions */
+  header[data-header] {
+    transition: background-color 0.3s ease, box-shadow 0.3s ease;
+  }
+</style>
