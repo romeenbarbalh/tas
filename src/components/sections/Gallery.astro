@@ -5,17 +5,23 @@ interface Props {
 }
 const { locale, t } = Astro.props;
 import { galleryImages } from "../../utils/constants";
+
+const MOBILE_PAGE_SIZE = 4;
+const pages: typeof galleryImages[] = [];
+for (let p = 0; p < galleryImages.length; p += MOBILE_PAGE_SIZE) {
+  pages.push(galleryImages.slice(p, p + MOBILE_PAGE_SIZE));
+}
 ---
 
 <section id="gallery" class="section bg-bg-elevated/30" aria-labelledby="gallery-title">
   <div class="container">
-    <header class="text-center max-w-2xl mx-auto mb-6 md:mb-12">
-      <h2 id="gallery-title" class="heading-lg mb-2 md:mb-4">{t("gallery.title")}</h2>
+    <header class="text-center max-w-2xl mx-auto mb-4 md:mb-12">
+      <h2 id="gallery-title" class="heading-lg mb-1 md:mb-4">{t("gallery.title")}</h2>
       <p class="text-body hidden md:block">{t("gallery.subtitle")}</p>
     </header>
 
-    <!-- Masonry Grid -->
-    <div class="grid grid-cols-2 gap-2 md:gap-4 lg:grid-cols-3 xl:grid-cols-4" role="list">
+    <!-- Desktop: grid -->
+    <div class="hidden md:grid grid-cols-2 gap-2 md:gap-4 lg:grid-cols-3 xl:grid-cols-4" role="list">
       {galleryImages.map((img, idx) => (
         <figure class="relative aspect-[4/5] rounded-xl overflow-hidden group card cursor-zoom-in animate-in stagger-{idx + 1}" role="listitem" data-lightbox={img.src}>
           <img
@@ -32,6 +38,44 @@ import { galleryImages } from "../../utils/constants";
           </div>
         </figure>
       ))}
+    </div>
+
+    <!-- Mobile: horizontal swipe pages (2x2 grid) -->
+    <div class="md:hidden relative">
+      <div class="overflow-x-auto snap-x snap-mandatory flex gap-2.5 scrollbar-none pb-2 -mx-1 px-1">
+        {pages.map((page) => (
+          <div class="snap-start shrink-0 w-[88%] last:w-full">
+            <div class="grid grid-cols-2 gap-2">
+              {page.map((img, idx) => (
+                <figure class="relative aspect-[4/5] rounded-lg overflow-hidden group cursor-zoom-in" role="listitem" data-lightbox={img.src}>
+                  <img
+                    src={img.src}
+                    alt={img.alt[locale]}
+                    class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    loading="lazy"
+                  />
+                  <figcaption class="absolute inset-0 bg-gradient-to-t from-bg/90 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-2">
+                    <span class="text-[10px] font-medium text-text w-full text-center">{img.alt[locale]}</span>
+                  </figcaption>
+                </figure>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+      {pages.length > 1 && (
+        <div class="flex items-center justify-center gap-1.5 mt-3" data-carousel-dots="gallery">
+          {pages.map((_, pIdx) => (
+            <span
+              class:list={[
+                "w-1.5 h-1.5 rounded-full transition-all duration-300",
+                pIdx === 0 ? "bg-gold w-4" : "bg-border",
+              ]}
+              data-dot={pIdx}
+            />
+          ))}
+        </div>
+      )}
     </div>
 
     <!-- Lightbox (CSS-only) -->
@@ -56,7 +100,38 @@ import { galleryImages } from "../../utils/constants";
   </div>
 </section>
 
+<style>
+  .scrollbar-none::-webkit-scrollbar { display: none; }
+  .scrollbar-none { -ms-overflow-style: none; scrollbar-width: none; }
+</style>
+
 <script>
+  document.querySelectorAll<HTMLElement>('[data-carousel-dots="gallery"]').forEach(dotsContainer => {
+    const scroll = dotsContainer.previousElementSibling?.querySelector<HTMLElement>('.overflow-x-auto');
+    if (!scroll) return;
+
+    const pages = scroll.querySelectorAll<HTMLElement>('.snap-start');
+    const dots = dotsContainer.querySelectorAll<HTMLElement>('[data-dot]');
+    let current = 0;
+
+    scroll.addEventListener('scroll', () => {
+      const pageWidth = pages[0]?.offsetWidth || 1;
+      const newCurrent = Math.round(scroll.scrollLeft / pageWidth);
+      if (newCurrent !== current && newCurrent >= 0 && newCurrent < pages.length) {
+        current = newCurrent;
+        dots.forEach((dot, i) => {
+          if (i === current) {
+            dot.classList.add('bg-gold', 'w-4');
+            dot.classList.remove('bg-border');
+          } else {
+            dot.classList.remove('bg-gold', 'w-4');
+            dot.classList.add('bg-border');
+          }
+        });
+      }
+    }, { passive: true });
+  });
+
   // Lightbox functionality
   const lightbox = document.getElementById('lightbox');
   const lightboxImg = document.getElementById('lightbox-img');
@@ -114,12 +189,10 @@ import { galleryImages } from "../../utils/constants";
   prevBtn?.addEventListener('click', () => navigate(-1));
   nextBtn?.addEventListener('click', () => navigate(1));
 
-  // Close on backdrop click
   lightbox?.addEventListener('click', (e) => {
     if (e.target === lightbox) closeLightbox();
   });
 
-  // Touch swipe support
   let touchStartX = 0;
   lightbox?.addEventListener('touchstart', (e) => { touchStartX = e.touches[0].clientX; }, { passive: true });
   lightbox?.addEventListener('touchend', (e) => {

@@ -7,7 +7,7 @@ const { locale, t } = Astro.props;
 import { team } from "../../utils/constants";
 import TeamCard from "../ui/TeamCard.astro";
 
-const MOBILE_PAGE_SIZE = 3;
+const MOBILE_PAGE_SIZE = 4;
 const pages: typeof team[] = [];
 for (let p = 0; p < team.length; p += MOBILE_PAGE_SIZE) {
   pages.push(team.slice(p, p + MOBILE_PAGE_SIZE));
