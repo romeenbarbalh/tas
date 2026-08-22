@@ -6,17 +6,23 @@ interface Props {
 const { locale, t } = Astro.props;
 import { services, categories } from "../../utils/constants";
 import ServiceCard from "../ui/ServiceCard.astro";
+
+const servicesByCategory: Record<string, typeof services> = {};
+for (const cat of categories) {
+  servicesByCategory[cat.id] = services.filter(s => s.category === cat.id);
+}
+const MOBILE_PAGE_SIZE = 3;
 ---
 
 <section id="services" class="section" aria-labelledby="services-title">
   <div class="container">
-    <header class="text-center max-w-2xl mx-auto mb-6 md:mb-12">
-      <h2 id="services-title" class="heading-lg mb-2 md:mb-4">{t("services.title")}</h2>
+    <header class="text-center max-w-2xl mx-auto mb-4 md:mb-12">
+      <h2 id="services-title" class="heading-lg mb-1 md:mb-4">{t("services.title")}</h2>
       <p class="text-body hidden md:block">{t("services.subtitle")}</p>
     </header>
 
     <!-- Category Tabs -->
-    <div class="flex flex-wrap items-center justify-center gap-1.5 md:gap-2 mb-6 md:mb-10" role="tablist" aria-label={t("services.categories")}>
+    <div class="flex flex-wrap items-center justify-center gap-1.5 md:gap-2 mb-4 md:mb-10" role="tablist" aria-label={t("services.categories")}>
       {categories.map((cat, i) => (
         <button
           role="tab"
@@ -36,31 +42,70 @@ import ServiceCard from "../ui/ServiceCard.astro";
     </div>
 
     <!-- Panels -->
-    <div class="space-y-4 md:space-y-8">
-      {categories.map((cat, i) => (
-        <div
-          role="tabpanel"
-          id={`panel-${cat.id}`}
-          aria-labelledby={`tab-${cat.id}`}
-          class={`${i !== 0 ? "hidden" : ""} animate-in`}
-          data-panel={cat.id}
-        >
-          <div class="grid grid-cols-2 gap-3 md:gap-6 lg:grid-cols-3">
-            {services
-              .filter(s => s.category === cat.id)
-              .map((service, idx) => (
-                <ServiceCard
-                  service={service}
-                  locale={locale}
-                  index={idx}
-                />
+    <div class="space-y-3 md:space-y-8">
+      {categories.map((cat, i) => {
+        const catServices = servicesByCategory[cat.id] || [];
+        const pages: typeof catServices[] = [];
+        for (let p = 0; p < catServices.length; p += MOBILE_PAGE_SIZE) {
+          pages.push(catServices.slice(p, p + MOBILE_PAGE_SIZE));
+        }
+        return (
+          <div
+            role="tabpanel"
+            id={`panel-${cat.id}`}
+            aria-labelledby={`tab-${cat.id}`}
+            class={`${i !== 0 ? "hidden" : ""} animate-in`}
+            data-panel={cat.id}
+          >
+            <!-- Desktop: normal grid -->
+            <div class="hidden md:grid md:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
+              {catServices.map((service, idx) => (
+                <ServiceCard service={service} locale={locale} index={idx} />
               ))}
+            </div>
+
+            <!-- Mobile: horizontal swipe pages -->
+            <div
+              class="md:hidden relative"
+              data-carousel-panel={cat.id}
+            >
+              <div class="overflow-x-auto snap-x snap-mandatory flex gap-3 scrollbar-none pb-2 -mx-1 px-1">
+                {pages.map((page, pageIdx) => (
+                  <div class="snap-start shrink-0 w-[88%] last:w-full">
+                    <div class="grid grid-cols-2 gap-2.5">
+                      {page.map((service, idx) => (
+                        <ServiceCard service={service} locale={locale} index={idx} />
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <!-- Dots -->
+              {pages.length > 1 && (
+                <div class="flex items-center justify-center gap-1.5 mt-3" data-carousel-dots={cat.id}>
+                  {pages.map((_, pIdx) => (
+                    <span
+                      class:list={[
+                        "w-1.5 h-1.5 rounded-full transition-all duration-300",
+                        pIdx === 0 ? "bg-gold w-4" : "bg-border",
+                      ]}
+                      data-dot={pIdx}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   </div>
 </section>
+
+<style>
+  .scrollbar-none::-webkit-scrollbar { display: none; }
+  .scrollbar-none { -ms-overflow-style: none; scrollbar-width: none; }
+</style>
 
 <script>
   // Category tabs
@@ -95,5 +140,35 @@ import ServiceCard from "../ui/ServiceCard.astro";
         }
       });
     });
+  });
+
+  // Mobile carousel scroll tracking
+  document.querySelectorAll<HTMLElement>('[data-carousel-panel]').forEach(carousel => {
+    const scroll = carousel.querySelector<HTMLElement>('.overflow-x-auto');
+    const catId = carousel.dataset.carouselPanel;
+    const dotsContainer = carousel.querySelector<HTMLElement>(`[data-carousel-dots="${catId}"]`);
+    if (!scroll || !dotsContainer) return;
+
+    const pages = scroll.querySelectorAll<HTMLElement>('.snap-start');
+    const dots = dotsContainer.querySelectorAll<HTMLElement>('[data-dot]');
+    let current = 0;
+
+    scroll.addEventListener('scroll', () => {
+      const scrollLeft = scroll.scrollLeft;
+      const pageWidth = pages[0]?.offsetWidth || 1;
+      const newCurrent = Math.round(scrollLeft / pageWidth);
+      if (newCurrent !== current && newCurrent >= 0 && newCurrent < pages.length) {
+        current = newCurrent;
+        dots.forEach((dot, i) => {
+          if (i === current) {
+            dot.classList.add('bg-gold', 'w-4');
+            dot.classList.remove('bg-border');
+          } else {
+            dot.classList.remove('bg-gold', 'w-4');
+            dot.classList.add('bg-border');
+          }
+        });
+      }
+    }, { passive: true });
   });
 </script>
