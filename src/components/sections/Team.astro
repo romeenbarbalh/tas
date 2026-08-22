@@ -6,19 +6,87 @@ interface Props {
 const { locale, t } = Astro.props;
 import { team } from "../../utils/constants";
 import TeamCard from "../ui/TeamCard.astro";
+
+const MOBILE_PAGE_SIZE = 3;
+const pages: typeof team[] = [];
+for (let p = 0; p < team.length; p += MOBILE_PAGE_SIZE) {
+  pages.push(team.slice(p, p + MOBILE_PAGE_SIZE));
+}
 ---
 
 <section id="team" class="section bg-bg-elevated/30" aria-labelledby="team-title">
   <div class="container">
-    <header class="text-center max-w-2xl mx-auto mb-6 md:mb-12">
-      <h2 id="team-title" class="heading-lg mb-2 md:mb-4">{t("team.title")}</h2>
+    <header class="text-center max-w-2xl mx-auto mb-4 md:mb-12">
+      <h2 id="team-title" class="heading-lg mb-1 md:mb-4">{t("team.title")}</h2>
       <p class="text-body hidden md:block">{t("team.subtitle")}</p>
     </header>
 
-    <div class="grid grid-cols-2 gap-3 md:gap-6 lg:grid-cols-3 xl:grid-cols-4">
+    <!-- Desktop: grid -->
+    <div class="hidden md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
       {team.map((member, idx) => (
         <TeamCard member={member} locale={locale} index={idx} />
       ))}
     </div>
+
+    <!-- Mobile: horizontal swipe pages -->
+    <div class="md:hidden relative">
+      <div class="overflow-x-auto snap-x snap-mandatory flex gap-3 scrollbar-none pb-2 -mx-1 px-1">
+        {pages.map((page) => (
+          <div class="snap-start shrink-0 w-[88%] last:w-full">
+            <div class="grid grid-cols-2 gap-2.5">
+              {page.map((member, idx) => (
+                <TeamCard member={member} locale={locale} index={idx} />
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+      {pages.length > 1 && (
+        <div class="flex items-center justify-center gap-1.5 mt-3" data-carousel-dots="team">
+          {pages.map((_, pIdx) => (
+            <span
+              class:list={[
+                "w-1.5 h-1.5 rounded-full transition-all duration-300",
+                pIdx === 0 ? "bg-gold w-4" : "bg-border",
+              ]}
+              data-dot={pIdx}
+            />
+          ))}
+        </div>
+      )}
+    </div>
   </div>
 </section>
+
+<style>
+  .scrollbar-none::-webkit-scrollbar { display: none; }
+  .scrollbar-none { -ms-overflow-style: none; scrollbar-width: none; }
+</style>
+
+<script>
+  document.querySelectorAll<HTMLElement>('[data-carousel-dots="team"]').forEach(dotsContainer => {
+    const scroll = dotsContainer.previousElementSibling?.querySelector<HTMLElement>('.overflow-x-auto');
+    if (!scroll) return;
+
+    const pages = scroll.querySelectorAll<HTMLElement>('.snap-start');
+    const dots = dotsContainer.querySelectorAll<HTMLElement>('[data-dot]');
+    let current = 0;
+
+    scroll.addEventListener('scroll', () => {
+      const pageWidth = pages[0]?.offsetWidth || 1;
+      const newCurrent = Math.round(scroll.scrollLeft / pageWidth);
+      if (newCurrent !== current && newCurrent >= 0 && newCurrent < pages.length) {
+        current = newCurrent;
+        dots.forEach((dot, i) => {
+          if (i === current) {
+            dot.classList.add('bg-gold', 'w-4');
+            dot.classList.remove('bg-border');
+          } else {
+            dot.classList.remove('bg-gold', 'w-4');
+            dot.classList.add('bg-border');
+          }
+        });
+      }
+    }, { passive: true });
+  });
+</script>
