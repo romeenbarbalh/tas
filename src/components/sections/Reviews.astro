@@ -7,26 +7,26 @@ const { locale, t } = Astro.props;
 import { salon, reviews } from "../../utils/constants";
 ---
 
-<div class="bg-bg-elevated/50 border border-border rounded-2xl p-6 md:p-8" aria-labelledby="reviews-title">
-  <header class="mb-6">
-    <h3 id="reviews-title" class="heading-md mb-2">{t("reviews.title")}</h3>
-    <p class="text-sm text-text-muted">{t("reviews.subtitle")}</p>
+<div class="bg-bg-elevated/50 border border-border rounded-2xl p-4 md:p-8" aria-labelledby="reviews-title">
+  <header class="mb-3 md:mb-6">
+    <h3 id="reviews-title" class="heading-md mb-1 md:mb-2">{t("reviews.title")}</h3>
+    <p class="text-xs md:text-sm text-text-muted">{t("reviews.subtitle")}</p>
   </header>
 
   <!-- Overall Rating -->
-  <div class="flex items-center gap-6 mb-8">
+  <div class="flex items-center gap-3 md:gap-6 mb-4 md:mb-8">
     <div class="flex-shrink-0 text-center">
-      <div class="font-display font-bold text-5xl md:text-6xl text-text">{salon.rating.overall}</div>
-      <div class="flex items-center justify-center gap-1 mt-1">
+      <div class="font-display font-bold text-3xl md:text-6xl text-text">{salon.rating.overall}</div>
+      <div class="flex items-center justify-center gap-0.5 md:gap-1 mt-0.5 md:mt-1">
         {[1,2,3,4,5].map(i => (
-          <svg key={i} width="18" height="18" viewBox="0 0 24 24" fill="currentColor" class="text-gold"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+          <svg key={i} width="14" height="14" viewBox="0 0 24 24" fill="currentColor" class="text-gold md:w-[18px] md:h-[18px]"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
         ))}
       </div>
-      <p class="text-sm text-text-muted mt-1">{salon.rating.count} {locale === "fr" ? "avis" : "reviews"}</p>
+      <p class="text-[10px] md:text-sm text-text-muted mt-0.5 md:mt-1">{salon.rating.count} {locale === "fr" ? "avis" : "reviews"}</p>
     </div>
 
     <!-- Breakdown Bars -->
-    <div class="flex-1 space-y-2">
+    <div class="flex-1 space-y-1 md:space-y-2">
       {[
         { key: "welcome", label: { fr: "Accueil", en: "Welcome" } },
         { key: "cleanliness", label: { fr: "Propreté", en: "Cleanliness" } },
@@ -36,12 +36,12 @@ import { salon, reviews } from "../../utils/constants";
         const score = salon.rating.breakdown[item.key as keyof typeof salon.rating.breakdown];
         const percent = (score / 5) * 100;
         return (
-          <div class="h-8">
-            <div class="flex justify-between text-xs mb-1">
+          <div class="h-5 md:h-8">
+            <div class="flex justify-between text-[10px] md:text-xs mb-0.5 md:mb-1">
               <span class="text-text-muted">{item.label[locale]}</span>
               <span class="font-medium text-text">{score.toFixed(1)}</span>
             </div>
-            <div class="h-2 bg-bg rounded-full overflow-hidden">
+            <div class="h-1.5 md:h-2 bg-bg rounded-full overflow-hidden">
               <div
                 class="h-full bg-gradient-to-r from-gold to-gold-light rounded-full transition-all duration-1000"
                 style={{ width: `${percent}%` }}
@@ -59,7 +59,8 @@ import { salon, reviews } from "../../utils/constants";
   </div>
 
   <!-- Sample Reviews -->
-  <div class="grid gap-4 md:grid-cols-3">
+  <!-- Desktop: grid -->
+  <div class="hidden md:grid gap-4 md:grid-cols-3">
     {reviews.map((review, idx) => (
       <article key={review.id} class="card p-5 animate-in stagger-{idx + 1}">
         <div class="flex items-center gap-1 mb-3">
@@ -77,16 +78,81 @@ import { salon, reviews } from "../../utils/constants";
     ))}
   </div>
 
+  <!-- Mobile: horizontal swipe -->
+  <div class="md:hidden relative">
+    <div class="overflow-x-auto snap-x snap-mandatory flex gap-2.5 scrollbar-none pb-2 -mx-1 px-1">
+      {reviews.map((review, idx) => (
+        <article key={review.id} class="snap-start shrink-0 w-[85%] last:w-full card p-3.5 animate-in">
+          <div class="flex items-center gap-0.5 mb-2">
+            {[1,2,3,4,5].map(i => (
+              <svg key={i} width="12" height="12" viewBox="0 0 24 24" fill="currentColor" class="text-gold"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+            ))}
+          </div>
+          <p class="text-xs text-text-muted mb-2 line-clamp-3">"{review.text[locale]}"</p>
+          <footer class="flex items-center gap-1.5 text-[10px] text-text-dim">
+            <span class="font-medium text-text">{review.author}</span>
+            <span>·</span>
+            <time dateTime={review.date}>{new Date(review.date).toLocaleDateString(locale, { day: 'numeric', month: 'long', year: 'numeric' })}</time>
+          </footer>
+        </article>
+      ))}
+    </div>
+    <div class="flex items-center justify-center gap-1.5 mt-2" data-carousel-dots="reviews">
+      {reviews.map((_, pIdx) => (
+        <span
+          class:list={[
+            "w-1.5 h-1.5 rounded-full transition-all duration-300",
+            pIdx === 0 ? "bg-gold w-4" : "bg-border",
+          ]}
+          data-dot={pIdx}
+        />
+      ))}
+    </div>
+  </div>
+
   <!-- View All Link -->
-  <div class="text-center mt-6">
+  <div class="text-center mt-3 md:mt-6">
     <a
       href="https://maps.app.goo.gl/a3vZC7h1iE4tYfrh6"
       target="_blank"
       rel="noopener noreferrer"
-      class="btn-ghost inline-flex items-center gap-2"
+      class="btn-ghost inline-flex items-center gap-2 text-xs md:text-sm"
     >
       {t("reviews.readMore")}
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="md:w-4 md:h-4"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
     </a>
   </div>
 </div>
+
+<style>
+  .scrollbar-none::-webkit-scrollbar { display: none; }
+  .scrollbar-none { -ms-overflow-style: none; scrollbar-width: none; }
+</style>
+
+<script>
+  document.querySelectorAll<HTMLElement>('[data-carousel-dots="reviews"]').forEach(dotsContainer => {
+    const scroll = dotsContainer.previousElementSibling?.querySelector<HTMLElement>('.overflow-x-auto');
+    if (!scroll) return;
+
+    const pages = scroll.querySelectorAll<HTMLElement>('.snap-start');
+    const dots = dotsContainer.querySelectorAll<HTMLElement>('[data-dot]');
+    let current = 0;
+
+    scroll.addEventListener('scroll', () => {
+      const pageWidth = pages[0]?.offsetWidth || 1;
+      const newCurrent = Math.round(scroll.scrollLeft / pageWidth);
+      if (newCurrent !== current && newCurrent >= 0 && newCurrent < pages.length) {
+        current = newCurrent;
+        dots.forEach((dot, i) => {
+          if (i === current) {
+            dot.classList.add('bg-gold', 'w-4');
+            dot.classList.remove('bg-border');
+          } else {
+            dot.classList.remove('bg-gold', 'w-4');
+            dot.classList.add('bg-border');
+          }
+        });
+      }
+    }, { passive: true });
+  });
+</script>
