@@ -10,13 +10,13 @@ import ServiceCard from "../ui/ServiceCard.astro";
 
 <section id="services" class="section" aria-labelledby="services-title">
   <div class="container">
-    <header class="text-center max-w-2xl mx-auto mb-12">
-      <h2 id="services-title" class="heading-lg mb-4">{t("services.title")}</h2>
-      <p class="text-body">{t("services.subtitle")}</p>
+    <header class="text-center max-w-2xl mx-auto mb-6 md:mb-12">
+      <h2 id="services-title" class="heading-lg mb-2 md:mb-4">{t("services.title")}</h2>
+      <p class="text-body hidden md:block">{t("services.subtitle")}</p>
     </header>
 
     <!-- Category Tabs -->
-    <div class="flex flex-wrap items-center justify-center gap-2 mb-10" role="tablist" aria-label={t("services.categories")}>
+    <div class="flex flex-wrap items-center justify-center gap-1.5 md:gap-2 mb-6 md:mb-10" role="tablist" aria-label={t("services.categories")}>
       {categories.map((cat, i) => (
         <button
           role="tab"
@@ -24,7 +24,7 @@ import ServiceCard from "../ui/ServiceCard.astro";
           aria-controls={`panel-${cat.id}`}
           id={`tab-${cat.id}`}
           data-category={cat.id}
-          class={`px-5 py-2.5 rounded-full text-sm font-medium transition-all ${
+          class={`px-3 md:px-5 py-1.5 md:py-2.5 rounded-full text-xs md:text-sm font-medium transition-all ${
             i === 0
               ? "bg-gold text-bg shadow-lg shadow-gold/20"
               : "bg-bg-elevated text-text-muted hover:text-text hover:bg-bg-card hover:border-gold/50 border border-border"
@@ -36,7 +36,7 @@ import ServiceCard from "../ui/ServiceCard.astro";
     </div>
 
     <!-- Panels -->
-    <div class="space-y-8">
+    <div class="space-y-4 md:space-y-8">
       {categories.map((cat, i) => (
         <div
           role="tabpanel"
@@ -45,7 +45,7 @@ import ServiceCard from "../ui/ServiceCard.astro";
           class={`${i !== 0 ? "hidden" : ""} animate-in`}
           data-panel={cat.id}
         >
-          <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          <div class="grid grid-cols-2 gap-3 md:gap-6 lg:grid-cols-3">
             {services
               .filter(s => s.category === cat.id)
               .map((service, idx) => (

@@ -9,13 +9,13 @@ import { galleryImages } from "../../utils/constants";
 
 <section id="gallery" class="section bg-bg-elevated/30" aria-labelledby="gallery-title">
   <div class="container">
-    <header class="text-center max-w-2xl mx-auto mb-12">
-      <h2 id="gallery-title" class="heading-lg mb-4">{t("gallery.title")}</h2>
-      <p class="text-body">{t("gallery.subtitle")}</p>
+    <header class="text-center max-w-2xl mx-auto mb-6 md:mb-12">
+      <h2 id="gallery-title" class="heading-lg mb-2 md:mb-4">{t("gallery.title")}</h2>
+      <p class="text-body hidden md:block">{t("gallery.subtitle")}</p>
     </header>
 
     <!-- Masonry Grid -->
-    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" role="list">
+    <div class="grid grid-cols-2 gap-2 md:gap-4 lg:grid-cols-3 xl:grid-cols-4" role="list">
       {galleryImages.map((img, idx) => (
         <figure class="relative aspect-[4/5] rounded-xl overflow-hidden group card cursor-zoom-in animate-in stagger-{idx + 1}" role="listitem" data-lightbox={img.src}>
           <img

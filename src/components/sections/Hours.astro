@@ -24,23 +24,23 @@ const todayKey = todayKeys[today];
 
 <section id="hours" class="section" aria-labelledby="hours-title">
   <div class="container">
-    <div class="grid lg:grid-cols-2 gap-8">
+    <div class="grid lg:grid-cols-2 gap-4 md:gap-8">
       <!-- Hours Widget -->
       <div class="lg:col-span-1">
-        <h3 id="hours-title" class="heading-md mb-6">{t("hours.title")}</h3>
-        <dl class="space-y-3">
+        <h3 id="hours-title" class="heading-md mb-3 md:mb-6">{t("hours.title")}</h3>
+        <dl class="space-y-1.5 md:space-y-3">
           {days.map(day => {
             const hours = salon.hours[day.key as keyof typeof salon.hours];
             const isToday = day.key === todayKey;
             return (
-              <div class={`flex items-center justify-between p-4 rounded-xl transition-all ${
+              <div class={`flex items-center justify-between p-2.5 md:p-4 rounded-xl transition-all ${
                 isToday ? "bg-gold/10 border border-gold/30 ring-1 ring-gold/20" : "bg-bg-elevated border border-border hover:border-gold/20"
               }`}>
-                <dt class={`font-medium ${isToday ? "text-gold" : "text-text"}`}>
+                <dt class={`font-medium text-xs md:text-base ${isToday ? "text-gold" : "text-text"}`}>
                   {day.label[locale]}
-                  {isToday && <span class="ml-2 px-1.5 py-0.5 text-xs rounded bg-gold text-bg font-bold">{t("hours.today")}</span>}
+                  {isToday && <span class="ml-1.5 md:ml-2 px-1 py-0.5 md:px-1.5 md:py-0.5 text-[10px] md:text-xs rounded bg-gold text-bg font-bold">{t("hours.today")}</span>}
                 </dt>
-                <dd class="font-mono text-sm {isToday ? "text-gold" : "text-text-muted"}">
+                <dd class="font-mono text-[11px] md:text-sm {isToday ? "text-gold" : "text-text-muted"}">
                   {hours.closed ? t("hours.closed") : `${hours.open} – ${hours.close}`}
                 </dd>
               </div>
