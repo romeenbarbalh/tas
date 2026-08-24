@@ -1,0 +1,79 @@
+---
+interface Props {
+  title: string;
+}
+const { title } = Astro.props;
+import "../styles/global.css";
+---
+
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>{title} — The Ark Studio Admin</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Syne:wght@400;500;600;700;800&display=swap" />
+  </head>
+  <body class="min-h-screen bg-zinc-950 text-zinc-100 font-sans antialiased">
+    <nav class="border-b border-zinc-800 bg-zinc-900/80 backdrop-blur-sm sticky top-0 z-50">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex items-center justify-between h-14">
+          <div class="flex items-center gap-6">
+            <a href="/admin/dashboard" class="font-display text-lg font-bold tracking-tight text-white">
+              The Ark Studio
+            </a>
+            <div class="hidden sm:flex items-center gap-1">
+              <a href="/admin/dashboard" class="px-3 py-1.5 text-sm rounded-lg text-zinc-300 hover:text-white hover:bg-zinc-800 transition-colors">
+                Rendez-vous
+              </a>
+              <a href="/admin/gallery" class="px-3 py-1.5 text-sm rounded-lg text-zinc-300 hover:text-white hover:bg-zinc-800 transition-colors">
+                Galerie
+              </a>
+            </div>
+          </div>
+          <div class="flex items-center gap-3">
+            <a href="/" class="text-sm text-zinc-400 hover:text-white transition-colors">
+              Voir le site
+            </a>
+            <button id="logout-btn" class="px-3 py-1.5 text-sm rounded-lg bg-zinc-800 text-zinc-300 hover:bg-zinc-700 hover:text-white transition-colors">
+              Déconnexion
+            </button>
+          </div>
+        </div>
+      </div>
+      <!-- Mobile nav -->
+      <div class="sm:hidden border-t border-zinc-800 px-4 py-2 flex gap-2">
+        <a href="/admin/dashboard" class="px-3 py-1.5 text-sm rounded-lg text-zinc-300 hover:text-white hover:bg-zinc-800 transition-colors">
+          Rendez-vous
+        </a>
+        <a href="/admin/gallery" class="px-3 py-1.5 text-sm rounded-lg text-zinc-300 hover:text-white hover:bg-zinc-800 transition-colors">
+          Galerie
+        </a>
+      </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <slot />
+    </main>
+
+    <script>
+      import { supabase } from "../lib/supabase";
+
+      document.getElementById("logout-btn")?.addEventListener("click", async () => {
+        await supabase.auth.signOut();
+        window.location.href = "/admin/";
+      });
+
+      // Redirect to login if not authenticated
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (!session && !window.location.pathname.endsWith("/admin/")) {
+          window.location.href = "/admin/";
+        }
+      });
+    </script>
+  </body>
+</html>

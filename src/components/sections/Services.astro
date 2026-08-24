@@ -22,7 +22,7 @@ const MOBILE_PAGE_SIZE = 3;
     </header>
 
     <!-- Category Tabs -->
-    <div class="flex flex-wrap items-center justify-center gap-1.5 md:gap-2 mb-4 md:mb-10" role="tablist" aria-label={t("services.categories")}>
+    <div class="flex flex-wrap items-center justify-center gap-1.5 md:gap-2 mb-4 md:mb-10" role="tablist" aria-label={locale === "fr" ? "Catégories de services" : "Service categories"}>
       {categories.map((cat, i) => (
         <button
           role="tab"

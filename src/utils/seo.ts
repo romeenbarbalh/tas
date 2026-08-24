@@ -17,7 +17,7 @@ export function generateSEO(props: SEOProps = {}) {
     ? `${props.title} | ${salon.name}`
     : `${salon.name} - ${locale === "fr" ? "Salon coiffure barbier Verviers" : "Hair salon barber Verviers"}`;
   const description = props.description ?? salon.description[locale];
-  const image = props.image ? `${baseUrl}${props.image}` : `${baseUrl}/images/og-default.jpg`;
+  const image = props.image ? `${baseUrl}${props.image}` : `${baseUrl}/images/og-default.svg`;
 
   return {
     title,

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { supabase } from "../../lib/supabase";
 
 interface Service {
   id: string;
@@ -34,7 +35,7 @@ const T: Record<string, Record<string, string>> = {
     notes: "Notes",
     submit: "Confirmer",
     submitting: "Envoi...",
-    success: "Demande envoyée !",
+    success: "Réservation envoyée ! Nous vous contacterons pour confirmer.",
     error: "Erreur. Réessayez.",
     required: "Requis",
     invalidPhone: "Numéro invalide",
@@ -384,9 +385,18 @@ export default function BookingForm({ locale, services, team }: Props) {
 
   useEffect(() => {
     if (formData.date && formData.barberId) {
-      const taken = ["10:00", "14:00", "18:00"];
-      setAvailableSlots(TIME_SLOTS.filter((s) => !taken.includes(s)));
-      if (formData.time && taken.includes(formData.time)) setFormData((p) => ({ ...p, time: "" }));
+      // Fetch taken slots from Supabase for this date + barber
+      supabase
+        .from("bookings")
+        .select("booking_time")
+        .eq("booking_date", formData.date)
+        .eq("barber", team.find((t) => t.id === formData.barberId)?.name || "")
+        .in("status", ["pending", "confirmed"])
+        .then(({ data }) => {
+          const taken = (data || []).map((r) => r.booking_time);
+          setAvailableSlots(TIME_SLOTS.filter((s) => !taken.includes(s)));
+          if (formData.time && taken.includes(formData.time)) setFormData((p) => ({ ...p, time: "" }));
+        });
     } else {
       setAvailableSlots(TIME_SLOTS);
     }
@@ -438,11 +448,28 @@ export default function BookingForm({ locale, services, team }: Props) {
     if (Object.keys(errs).length > 0) { setErrors(errs); return; }
 
     setStatus("submitting");
-    await new Promise((r) => setTimeout(r, 1200));
 
-    const svcNames = selectedServiceObjects.map((s) => `${s.name[locale]} (${s.priceEur})`).join(", ");
-    const msg = `Réservation The Ark Studio:\nService(s): ${svcNames}\nTotal: ${totalDisplay}\nCoiffeur: ${team.find((t) => t.id === formData.barberId)?.name}\nDate: ${formData.date}\nHeure: ${formData.time}\nNom: ${formData.name}\nTel: ${formData.phone}\nNotes: ${formData.notes || "—"}`;
-    window.open(`https://wa.me/+324XXXXXXXX?text=${encodeURIComponent(msg)}`, "_blank");
+    const barberName = team.find((t) => t.id === formData.barberId)?.name || "";
+    const serviceNames = selectedServiceObjects.map((s) => s.name[locale]);
+
+    const { error: dbError } = await supabase.from("bookings").insert({
+      client_name: formData.name,
+      client_phone: formData.phone,
+      client_email: "",
+      services: serviceNames,
+      total_price: total.min,
+      booking_date: formData.date,
+      booking_time: formData.time,
+      barber: barberName,
+      notes: formData.notes || null,
+      status: "pending",
+    });
+
+    if (dbError) {
+      console.error("Booking save error:", dbError);
+      setStatus("error");
+      return;
+    }
 
     setStatus("success");
     setSelectedServices([]);

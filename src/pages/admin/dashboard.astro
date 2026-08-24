@@ -1,0 +1,476 @@
+---
+import AdminLayout from "../../layouts/AdminLayout.astro";
+---
+
+<AdminLayout title="Rendez-vous">
+  <div id="app" class="space-y-6">
+    <!-- Stats -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3" id="stats-grid">
+      <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
+        <p class="text-xs text-zinc-400 mb-1">En attente</p>
+        <p class="text-2xl font-bold text-amber-400" id="stat-pending">0</p>
+      </div>
+      <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
+        <p class="text-xs text-zinc-400 mb-1">Confirmées</p>
+        <p class="text-2xl font-bold text-emerald-400" id="stat-confirmed">0</p>
+      </div>
+      <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
+        <p class="text-xs text-zinc-400 mb-1">Annulées</p>
+        <p class="text-2xl font-bold text-red-400" id="stat-cancelled">0</p>
+      </div>
+      <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
+        <p class="text-xs text-zinc-400 mb-1">Total</p>
+        <p class="text-2xl font-bold text-white" id="stat-total">0</p>
+      </div>
+    </div>
+
+    <!-- Debug banner (hidden by default) -->
+    <div id="debug-banner" class="hidden bg-red-900/30 border border-red-700 rounded-xl p-4 text-sm text-red-300"></div>
+
+    <!-- Tabs -->
+    <div class="flex gap-1 bg-zinc-900 border border-zinc-800 rounded-xl p-1 w-fit">
+      <button id="tab-list" class="px-4 py-2 text-sm font-medium rounded-lg bg-white text-zinc-900 transition-colors">
+        Liste
+      </button>
+      <button id="tab-calendar" class="px-4 py-2 text-sm font-medium rounded-lg text-zinc-400 hover:text-white transition-colors">
+        Calendrier
+      </button>
+    </div>
+
+    <!-- LIST VIEW -->
+    <div id="view-list">
+      <!-- Filters -->
+      <div class="flex flex-wrap gap-2 mb-4">
+        <button data-filter="all" class="filter-btn px-3 py-1.5 text-xs font-medium rounded-lg bg-white text-zinc-900 transition-colors">
+          Tous
+        </button>
+        <button data-filter="pending" class="filter-btn px-3 py-1.5 text-xs font-medium rounded-lg bg-zinc-800 text-zinc-400 hover:text-white transition-colors">
+          En attente
+        </button>
+        <button data-filter="confirmed" class="filter-btn px-3 py-1.5 text-xs font-medium rounded-lg bg-zinc-800 text-zinc-400 hover:text-white transition-colors">
+          Confirmées
+        </button>
+        <button data-filter="cancelled" class="filter-btn px-3 py-1.5 text-xs font-medium rounded-lg bg-zinc-800 text-zinc-400 hover:text-white transition-colors">
+          Annulées
+        </button>
+      </div>
+
+      <!-- Bookings table -->
+      <div class="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
+        <!-- Table header (desktop) -->
+        <div class="hidden md:grid grid-cols-[1fr_120px_100px_140px_100px_120px] gap-4 px-5 py-3 border-b border-zinc-800 text-xs font-medium text-zinc-500 uppercase tracking-wider">
+          <span>Client</span>
+          <span>Date</span>
+          <span>Heure</span>
+          <span>Services</span>
+          <span>Prix</span>
+          <span class="text-right">Actions</span>
+        </div>
+
+        <!-- Bookings rows -->
+        <div id="bookings-list" class="divide-y divide-zinc-800/50">
+          <div class="text-sm text-zinc-500 text-center py-12">Chargement...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CALENDAR VIEW -->
+    <div id="view-calendar" class="hidden">
+      <div class="grid lg:grid-cols-[1fr_380px] gap-6">
+        <div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-5">
+          <div class="flex items-center justify-between mb-4">
+            <button id="prev-month" class="p-2 rounded-lg hover:bg-zinc-800 transition-colors text-zinc-400 hover:text-white">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            </button>
+            <h2 id="calendar-title" class="font-display text-lg font-semibold text-white"></h2>
+            <button id="next-month" class="p-2 rounded-lg hover:bg-zinc-800 transition-colors text-zinc-400 hover:text-white">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            </button>
+          </div>
+          <div class="grid grid-cols-7 gap-1 mb-2">
+            {["Lun","Mar","Mer","Jeu","Ven","Sam","Dim"].map(d => (
+              <div class="text-center text-[11px] font-medium text-zinc-500 py-1">{d}</div>
+            ))}
+          </div>
+          <div id="calendar-grid" class="grid grid-cols-7 gap-1"></div>
+        </div>
+
+        <div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-5">
+          <h3 id="selected-date-title" class="font-display text-base font-semibold text-white mb-1">Aujourd'hui</h3>
+          <p id="selected-date-subtitle" class="text-xs text-zinc-400 mb-4">Sélectionnez un jour</p>
+          <div id="day-bookings" class="space-y-3 max-h-[500px] overflow-y-auto pr-1">
+            <p class="text-sm text-zinc-500 text-center py-8">Aucune réservation</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <style>
+    @reference "../../styles/global.css";
+    .day-cell {
+      position: relative;
+      aspect-ratio: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      border-radius: 0.5rem;
+      font-size: 0.875rem;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .day-cell:hover { background-color: rgb(39 39 42); }
+    .day-cell.today { box-shadow: inset 0 0 0 1px rgba(255,255,255,0.3); }
+    .day-cell.selected { background-color: white; color: rgb(24 24 27); font-weight: 600; }
+    .day-cell.other-month { color: rgb(63 63 70); }
+    .day-cell.has-bookings::after {
+      content: "";
+      position: absolute;
+      bottom: 4px;
+      width: 4px;
+      height: 4px;
+      border-radius: 9999px;
+      background-color: rgb(250 204 21);
+    }
+    .day-cell.has-confirmed::after { background-color: rgb(52 211 153); }
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 8px;
+      border-radius: 9999px;
+      font-size: 10px;
+      font-weight: 500;
+    }
+    .status-pending { background-color: rgba(250 204 21, 0.15); color: rgb(250 204 21); }
+    .status-confirmed { background-color: rgba(52, 211, 153, 0.15); color: rgb(52, 211, 153); }
+    .status-cancelled { background-color: rgba(248, 113, 113, 0.15); color: rgb(248, 113, 113); }
+  </style>
+
+  <script>
+    import { supabase } from "../../lib/supabase";
+
+    // Auth guard
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) window.location.href = "/admin/";
+    });
+
+    interface Booking {
+      id: string;
+      client_name: string;
+      client_email: string;
+      client_phone: string;
+      services: string[];
+      total_price: number;
+      booking_date: string;
+      booking_time: string;
+      barber: string;
+      status: "pending" | "confirmed" | "cancelled";
+      notes: string | null;
+      created_at: string;
+    }
+
+    const MONTHS_FR = ["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
+    let currentDate = new Date();
+    let selectedDate = new Date();
+    let allBookings: Booking[] = [];
+    let currentFilter = "all";
+
+    const debugBanner = document.getElementById("debug-banner")!;
+
+    function showDebug(msg: string) {
+      debugBanner.textContent = msg;
+      debugBanner.classList.remove("hidden");
+    }
+
+    async function loadBookings() {
+      const { data, error } = await supabase
+        .from("bookings")
+        .select("*")
+        .order("booking_date", { ascending: false });
+
+      if (error) {
+        showDebug(`Erreur Supabase: ${error.message} (Code: ${error.code}). Vérifiez que la table "bookings" existe et que les policies RLS sont configurées.`);
+        console.error("Supabase error:", error);
+        allBookings = [];
+      } else {
+        debugBanner.classList.add("hidden");
+        allBookings = (data as Booking[]) || [];
+      }
+
+      updateStats();
+      renderList();
+      renderCalendar();
+    }
+
+    function updateStats() {
+      const pending = allBookings.filter(b => b.status === "pending").length;
+      const confirmed = allBookings.filter(b => b.status === "confirmed").length;
+      const cancelled = allBookings.filter(b => b.status === "cancelled").length;
+      document.getElementById("stat-pending")!.textContent = String(pending);
+      document.getElementById("stat-confirmed")!.textContent = String(confirmed);
+      document.getElementById("stat-cancelled")!.textContent = String(cancelled);
+      document.getElementById("stat-total")!.textContent = String(allBookings.length);
+    }
+
+    /* ─── LIST VIEW ─── */
+    function renderList() {
+      const list = document.getElementById("bookings-list")!;
+      const filtered = currentFilter === "all" ? allBookings : allBookings.filter(b => b.status === currentFilter);
+
+      if (filtered.length === 0) {
+        list.innerHTML = `<div class="text-sm text-zinc-500 text-center py-12">
+          ${currentFilter === "all" ? "Aucune réservation pour le moment" : "Aucune réservation avec ce statut"}
+        </div>`;
+        return;
+      }
+
+      list.innerHTML = filtered.map(b => {
+        const d = new Date(b.booking_date + "T00:00:00");
+        const dateStr = d.toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
+        const isMobile = window.innerWidth < 768;
+
+        if (isMobile) {
+          return `
+            <div class="p-4 space-y-2">
+              <div class="flex items-start justify-between gap-2">
+                <div>
+                  <p class="font-medium text-sm text-white">${esc(b.client_name)}</p>
+                  <p class="text-xs text-zinc-400 mt-0.5">TEL: ${esc(b.client_phone)}</p>
+                </div>
+                <span class="status-badge status-${b.status}">${statusLabel(b.status)}</span>
+              </div>
+              <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-zinc-400">
+                <span class="flex items-center gap-1">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                  ${dateStr}
+                </span>
+                <span class="flex items-center gap-1">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                  ${b.booking_time}
+                </span>
+                <span class="font-medium text-white">${b.total_price}€</span>
+              </div>
+              <p class="text-xs text-zinc-500">${esc(b.services.join(", "))}</p>
+              ${b.barber ? `<p class="text-xs text-zinc-500">Coiffeur: ${esc(b.barber)}</p>` : ""}
+              ${b.notes ? `<p class="text-xs text-zinc-500 italic">"${esc(b.notes)}"</p>` : ""}
+              <div class="flex gap-2 pt-1">
+                ${b.status === "pending" ? `
+                  <button data-confirm="${b.id}" class="flex-1 py-2 text-xs font-medium rounded-lg bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25 transition-colors">Confirmer</button>
+                  <button data-cancel="${b.id}" class="flex-1 py-2 text-xs font-medium rounded-lg bg-red-500/15 text-red-400 hover:bg-red-500/25 transition-colors">Annuler</button>
+                ` : `
+                  <button data-delete="${b.id}" class="flex-1 py-2 text-xs font-medium rounded-lg bg-zinc-700/50 text-zinc-400 hover:bg-zinc-700 hover:text-white transition-colors">Supprimer</button>
+                `}
+              </div>
+            </div>`;
+        }
+
+        return `
+          <div class="grid grid-cols-[1fr_120px_100px_140px_100px_120px] gap-4 items-center px-5 py-4 hover:bg-zinc-800/30 transition-colors">
+            <div>
+              <p class="font-medium text-sm text-white">${esc(b.client_name)}</p>
+              <p class="text-xs text-zinc-400">${esc(b.client_phone)}</p>
+              ${b.barber ? `<p class="text-[11px] text-zinc-500">${esc(b.barber)}</p>` : ""}
+            </div>
+            <span class="text-sm text-zinc-300">${dateStr}</span>
+            <span class="text-sm text-zinc-300">${b.booking_time}</span>
+            <span class="text-xs text-zinc-400 line-clamp-2">${esc(b.services.join(", "))}</span>
+            <span class="text-sm font-medium text-amber-400">${b.total_price}€</span>
+            <div class="flex items-center gap-2 justify-end">
+              <span class="status-badge status-${b.status}">${statusLabel(b.status)}</span>
+              ${b.status === "pending" ? `
+                <button data-confirm="${b.id}" class="p-1.5 rounded-lg bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25 transition-colors" title="Confirmer">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                </button>
+                <button data-cancel="${b.id}" class="p-1.5 rounded-lg bg-red-500/15 text-red-400 hover:bg-red-500/25 transition-colors" title="Annuler">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+              ` : `
+                <button data-delete="${b.id}" class="p-1.5 rounded-lg bg-zinc-700/50 text-zinc-400 hover:bg-zinc-700 hover:text-white transition-colors" title="Supprimer">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                </button>
+              `}
+            </div>
+          </div>`;
+      }).join("");
+
+      bindActions(list);
+    }
+
+    function bindActions(container: HTMLElement) {
+      container.querySelectorAll("[data-confirm]").forEach(btn => {
+        btn.addEventListener("click", async () => {
+          const id = (btn as HTMLElement).dataset.confirm!;
+          await supabase.from("bookings").update({ status: "confirmed" }).eq("id", id);
+          await loadBookings();
+        });
+      });
+      container.querySelectorAll("[data-cancel]").forEach(btn => {
+        btn.addEventListener("click", async () => {
+          const id = (btn as HTMLElement).dataset.cancel!;
+          await supabase.from("bookings").update({ status: "cancelled" }).eq("id", id);
+          await loadBookings();
+        });
+      });
+      container.querySelectorAll("[data-delete]").forEach(btn => {
+        btn.addEventListener("click", async () => {
+          if (!confirm("Supprimer cette réservation ?")) return;
+          const id = (btn as HTMLElement).dataset.delete!;
+          await supabase.from("bookings").delete().eq("id", id);
+          await loadBookings();
+        });
+      });
+    }
+
+    /* ─── CALENDAR VIEW ─── */
+    function renderCalendar() {
+      const year = currentDate.getFullYear();
+      const month = currentDate.getMonth();
+      document.getElementById("calendar-title")!.textContent = `${MONTHS_FR[month]} ${year}`;
+
+      const firstDay = new Date(year, month, 1);
+      const lastDay = new Date(year, month + 1, 0);
+      const startDay = (firstDay.getDay() + 6) % 7;
+      const daysInMonth = lastDay.getDate();
+      const todayStr = formatDate(new Date());
+      const selectedStr = formatDate(selectedDate);
+
+      let html = "";
+      const prevMonthLast = new Date(year, month, 0).getDate();
+      for (let i = startDay - 1; i >= 0; i--) {
+        html += `<div class="day-cell other-month">${prevMonthLast - i}</div>`;
+      }
+      for (let d = 1; d <= daysInMonth; d++) {
+        const dateStr = formatDate(new Date(year, month, d));
+        const dayBookings = allBookings.filter(b => b.booking_date === dateStr);
+        const hasPending = dayBookings.some(b => b.status === "pending");
+        const hasConfirmed = dayBookings.some(b => b.status === "confirmed");
+        const classes = [
+          "day-cell",
+          dateStr === todayStr ? "today" : "",
+          dateStr === selectedStr ? "selected" : "",
+          dayBookings.length > 0 ? (hasConfirmed && !hasPending ? "has-confirmed" : "has-bookings") : "",
+        ].filter(Boolean).join(" ");
+        html += `<div class="${classes}" data-date="${dateStr}">${d}</div>`;
+      }
+      const totalCells = startDay + daysInMonth;
+      const remaining = totalCells % 7 === 0 ? 0 : 7 - (totalCells % 7);
+      for (let i = 1; i <= remaining; i++) {
+        html += `<div class="day-cell other-month">${i}</div>`;
+      }
+
+      document.getElementById("calendar-grid")!.innerHTML = html;
+
+      document.querySelectorAll<HTMLElement>("[data-date]").forEach(cell => {
+        cell.addEventListener("click", () => {
+          selectedDate = new Date(cell.dataset.date + "T00:00:00");
+          renderCalendar();
+          renderDayBookings();
+        });
+      });
+    }
+
+    function renderDayBookings() {
+      const dateStr = formatDate(selectedDate);
+      const dayBookings = allBookings.filter(b => b.booking_date === dateStr);
+      document.getElementById("selected-date-title")!.textContent = selectedDate.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
+      document.getElementById("selected-date-subtitle")!.textContent = `${dayBookings.length} réservation${dayBookings.length !== 1 ? "s" : ""}`;
+
+      const container = document.getElementById("day-bookings")!;
+      if (dayBookings.length === 0) {
+        container.innerHTML = `<p class="text-sm text-zinc-500 text-center py-8">Aucune réservation ce jour</p>`;
+        return;
+      }
+
+      container.innerHTML = dayBookings.map(b => `
+        <div class="bg-zinc-800/50 border border-zinc-700/50 rounded-xl p-3.5 space-y-2">
+          <div class="flex items-start justify-between gap-2">
+            <div>
+              <p class="font-medium text-sm text-white">${esc(b.client_name)}</p>
+              <p class="text-xs text-zinc-400 mt-0.5">${esc(b.client_phone)}</p>
+            </div>
+            <span class="status-badge status-${b.status}">${statusLabel(b.status)}</span>
+          </div>
+          <div class="text-xs text-zinc-400 space-y-0.5">
+            <p class="font-medium text-zinc-300">${b.booking_time}</p>
+            <p>${esc(b.services.join(", "))}</p>
+            <p class="text-amber-400 font-medium">${b.total_price}€</p>
+            ${b.barber ? `<p>Coiffeur: ${esc(b.barber)}</p>` : ""}
+          </div>
+          ${b.status === "pending" ? `
+            <div class="flex gap-2 pt-1">
+              <button data-confirm="${b.id}" class="flex-1 py-1.5 text-xs font-medium rounded-lg bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25 transition-colors">Confirmer</button>
+              <button data-cancel="${b.id}" class="flex-1 py-1.5 text-xs font-medium rounded-lg bg-red-500/15 text-red-400 hover:bg-red-500/25 transition-colors">Annuler</button>
+            </div>
+          ` : `
+            <button data-delete="${b.id}" class="w-full py-1.5 text-xs font-medium rounded-lg bg-zinc-700/50 text-zinc-400 hover:bg-zinc-700 hover:text-white transition-colors mt-1">Supprimer</button>
+          `}
+        </div>
+      `).join("");
+
+      bindActions(container);
+    }
+
+    /* ─── HELPERS ─── */
+    function formatDate(d: Date): string {
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    }
+
+    function statusLabel(s: string): string {
+      return s === "pending" ? "En attente" : s === "confirmed" ? "Confirmée" : "Annulée";
+    }
+
+    function esc(str: string): string {
+      const div = document.createElement("div");
+      div.textContent = str || "";
+      return div.innerHTML;
+    }
+
+    /* ─── TABS ─── */
+    const tabList = document.getElementById("tab-list")!;
+    const tabCal = document.getElementById("tab-calendar")!;
+    const viewList = document.getElementById("view-list")!;
+    const viewCal = document.getElementById("view-calendar")!;
+
+    tabList.addEventListener("click", () => {
+      tabList.className = "px-4 py-2 text-sm font-medium rounded-lg bg-white text-zinc-900 transition-colors";
+      tabCal.className = "px-4 py-2 text-sm font-medium rounded-lg text-zinc-400 hover:text-white transition-colors";
+      viewList.classList.remove("hidden");
+      viewCal.classList.add("hidden");
+      renderList();
+    });
+
+    tabCal.addEventListener("click", () => {
+      tabCal.className = "px-4 py-2 text-sm font-medium rounded-lg bg-white text-zinc-900 transition-colors";
+      tabList.className = "px-4 py-2 text-sm font-medium rounded-lg text-zinc-400 hover:text-white transition-colors";
+      viewCal.classList.remove("hidden");
+      viewList.classList.add("hidden");
+      renderCalendar();
+      renderDayBookings();
+    });
+
+    document.getElementById("prev-month")!.addEventListener("click", () => {
+      currentDate.setMonth(currentDate.getMonth() - 1);
+      renderCalendar();
+    });
+    document.getElementById("next-month")!.addEventListener("click", () => {
+      currentDate.setMonth(currentDate.getMonth() + 1);
+      renderCalendar();
+    });
+
+    /* ─── FILTERS ─── */
+    document.querySelectorAll("[data-filter]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        currentFilter = (btn as HTMLElement).dataset.filter!;
+        document.querySelectorAll("[data-filter]").forEach(b => {
+          b.className = "filter-btn px-3 py-1.5 text-xs font-medium rounded-lg bg-zinc-800 text-zinc-400 hover:text-white transition-colors";
+        });
+        btn.className = "filter-btn px-3 py-1.5 text-xs font-medium rounded-lg bg-white text-zinc-900 transition-colors";
+        renderList();
+      });
+    });
+
+    /* ─── INIT ─── */
+    loadBookings();
+  </script>
+</AdminLayout>
