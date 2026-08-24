@@ -2,5 +2,5 @@
   "buildCommand": "node_modules/.bin/astro build",
   "outputDirectory": "dist",
   "installCommand": "npm install",
-  "trailingSlash": true
+  "framework": null
 }
