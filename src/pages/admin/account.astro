@@ -1,39 +1,15 @@
 ---
+export const prerender = true;
 import AdminLayout from "../../layouts/AdminLayout.astro";
 ---
 
 <AdminLayout title="Compte">
   <div class="max-w-xl mx-auto space-y-8">
 
-    <!-- Change Password -->
-    <div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
-      <h2 class="font-display text-lg font-semibold text-white mb-1">Changer le mot de passe</h2>
-      <p class="text-sm text-zinc-400 mb-5">Modifiez votre propre mot de passe.</p>
-      <form id="change-pw-form" class="space-y-4">
-        <div>
-          <label for="new-pw" class="block text-sm font-medium text-zinc-300 mb-1.5">Nouveau mot de passe</label>
-          <input type="password" id="new-pw" required minlength="6"
-            class="w-full px-4 py-2.5 bg-zinc-800 border border-zinc-700 rounded-lg text-white text-sm placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-white/20 transition-colors"
-            placeholder="6 caractères minimum" />
-        </div>
-        <div>
-          <label for="confirm-pw" class="block text-sm font-medium text-zinc-300 mb-1.5">Confirmer</label>
-          <input type="password" id="confirm-pw" required minlength="6"
-            class="w-full px-4 py-2.5 bg-zinc-800 border border-zinc-700 rounded-lg text-white text-sm placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-white/20 transition-colors"
-            placeholder="Répétez le mot de passe" />
-        </div>
-        <div id="pw-msg" class="hidden text-sm rounded-lg px-4 py-2"></div>
-        <button type="submit" id="pw-btn"
-          class="w-full py-2.5 bg-white text-zinc-900 font-medium text-sm rounded-lg hover:bg-zinc-200 transition-colors disabled:opacity-50">
-          Mettre à jour
-        </button>
-      </form>
-    </div>
-
     <!-- Create User -->
     <div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
-      <h2 class="font-display text-lg font-semibold text-white mb-1">Créer un compte</h2>
-      <p class="text-sm text-zinc-400 mb-5">Ajoutez un nouvel utilisateur (coiffeur, admin...).</p>
+      <h2 class="font-display text-lg font-semibold text-white mb-1">Ajouter un utilisateur</h2>
+      <p class="text-sm text-zinc-400 mb-5">Créez un nouveau compte (coiffeur, admin...).</p>
       <form id="create-user-form" class="space-y-4">
         <div>
           <label for="new-email" class="block text-sm font-medium text-zinc-300 mb-1.5">Email</label>
@@ -57,11 +33,43 @@ import AdminLayout from "../../layouts/AdminLayout.astro";
 
     <!-- Users List -->
     <div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
-      <h2 class="font-display text-lg font-semibold text-white mb-1">Utilisateurs</h2>
-      <p class="text-sm text-zinc-400 mb-5">Comptes existants.</p>
+      <div class="flex items-center justify-between mb-5">
+        <div>
+          <h2 class="font-display text-lg font-semibold text-white mb-1">Utilisateurs</h2>
+          <p class="text-sm text-zinc-400">Liste des comptes existants.</p>
+        </div>
+        <button id="refresh-users" class="p-2 rounded-lg bg-zinc-800 text-zinc-400 hover:text-white transition-colors" title="Rafraîchir">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+        </button>
+      </div>
       <div id="users-list" class="space-y-2">
         <p class="text-sm text-zinc-500 text-center py-4">Chargement...</p>
       </div>
+    </div>
+
+    <!-- Change Password -->
+    <div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
+      <h2 class="font-display text-lg font-semibold text-white mb-1">Changer mon mot de passe</h2>
+      <p class="text-sm text-zinc-400 mb-5">Modifiez votre propre mot de passe.</p>
+      <form id="change-pw-form" class="space-y-4">
+        <div>
+          <label for="new-pw" class="block text-sm font-medium text-zinc-300 mb-1.5">Nouveau mot de passe</label>
+          <input type="password" id="new-pw" required minlength="6"
+            class="w-full px-4 py-2.5 bg-zinc-800 border border-zinc-700 rounded-lg text-white text-sm placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-white/20 transition-colors"
+            placeholder="6 caractères minimum" />
+        </div>
+        <div>
+          <label for="confirm-pw" class="block text-sm font-medium text-zinc-300 mb-1.5">Confirmer</label>
+          <input type="password" id="confirm-pw" required minlength="6"
+            class="w-full px-4 py-2.5 bg-zinc-800 border border-zinc-700 rounded-lg text-white text-sm placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-white/20 transition-colors"
+            placeholder="Répétez le mot de passe" />
+        </div>
+        <div id="pw-msg" class="hidden text-sm rounded-lg px-4 py-2"></div>
+        <button type="submit" id="pw-btn"
+          class="w-full py-2.5 bg-white text-zinc-900 font-medium text-sm rounded-lg hover:bg-zinc-200 transition-colors disabled:opacity-50">
+          Mettre à jour
+        </button>
+      </form>
     </div>
 
   </div>
@@ -69,96 +77,142 @@ import AdminLayout from "../../layouts/AdminLayout.astro";
   <script>
     import { supabase, getSupabase } from "../../lib/supabase";
 
-    const pwForm = document.getElementById("change-pw-form") as HTMLFormElement;
-    const newPw = document.getElementById("new-pw") as HTMLInputElement;
-    const confirmPw = document.getElementById("confirm-pw") as HTMLInputElement;
-    const pwMsg = document.getElementById("pw-msg")!;
-    const pwBtn = document.getElementById("pw-btn") as HTMLButtonElement;
-
-    const createForm = document.getElementById("create-user-form") as HTMLFormElement;
-    const newEmail = document.getElementById("new-email") as HTMLInputElement;
-    const newPassword = document.getElementById("new-password") as HTMLInputElement;
-    const createMsg = document.getElementById("create-msg")!;
-    const createBtn = document.getElementById("create-btn") as HTMLButtonElement;
+    async function apiCall(method: string, body?: any) {
+      const client = getSupabase();
+      if (!client) throw new Error("Supabase non configuré");
+      const { data: { session } } = await client.auth.getSession();
+      if (!session) throw new Error("Non connecté");
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${session.access_token}`,
+      };
+      const opts: RequestInit = { method, headers };
+      if (body) opts.body = JSON.stringify(body);
+      const res = await fetch("/api/users/", opts);
+      return res.json();
+    }
 
     function showMsg(el: HTMLElement, text: string, ok: boolean) {
       el.textContent = text;
       el.className = `text-sm rounded-lg px-4 py-2 ${ok ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/20" : "bg-red-500/15 text-red-400 border border-red-500/20"}`;
     }
 
-    pwForm.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      pwMsg.className = "hidden";
-      if (newPw.value !== confirmPw.value) {
-        showMsg(pwMsg, "Les mots de passe ne correspondent pas.", false);
-        return;
-      }
-      pwBtn.disabled = true;
-      pwBtn.textContent = "Mise à jour...";
-      const client = getSupabase();
-      if (!client) { showMsg(pwMsg, "Supabase non configuré.", false); pwBtn.disabled = false; pwBtn.textContent = "Mettre à jour"; return; }
-      const { error } = await client.auth.updateUser({ password: newPw.value });
-      if (error) {
-        showMsg(pwMsg, error.message, false);
-      } else {
-        showMsg(pwMsg, "Mot de passe modifié avec succès.", true);
-        newPw.value = "";
-        confirmPw.value = "";
-      }
-      pwBtn.disabled = false;
-      pwBtn.textContent = "Mettre à jour";
-    });
+    /* ─── CREATE USER ─── */
+    const createForm = document.getElementById("create-user-form") as HTMLFormElement;
+    const createMsg = document.getElementById("create-msg")!;
+    const createBtn = document.getElementById("create-btn") as HTMLButtonElement;
 
     createForm.addEventListener("submit", async (e) => {
       e.preventDefault();
       createMsg.className = "hidden";
       createBtn.disabled = true;
       createBtn.textContent = "Création...";
-      const client = getSupabase();
-      if (!client) { showMsg(createMsg, "Supabase non configuré.", false); createBtn.disabled = false; createBtn.textContent = "Créer le compte"; return; }
-      const { error } = await client.auth.signUp({
-        email: newEmail.value.trim(),
-        password: newPassword.value,
-      });
-      if (error) {
-        showMsg(createMsg, error.message, false);
-      } else {
-        showMsg(createMsg, "Compte créé avec succès !", true);
-        createForm.reset();
-        loadUsers();
+      try {
+        const data = await apiCall("POST", {
+          email: (document.getElementById("new-email") as HTMLInputElement).value.trim(),
+          password: (document.getElementById("new-password") as HTMLInputElement).value,
+        });
+        if (data.error) {
+          showMsg(createMsg, data.error, false);
+        } else {
+          showMsg(createMsg, "Compte créé avec succès !", true);
+          createForm.reset();
+          loadUsers();
+        }
+      } catch (err: any) {
+        showMsg(createMsg, err.message || "Erreur", false);
       }
       createBtn.disabled = false;
       createBtn.textContent = "Créer le compte";
     });
 
+    /* ─── DELETE USER ─── */
+    async function deleteUser(id: string, btn: HTMLElement) {
+      if (!confirm("Supprimer ce compte ? Cette action est irréversible.")) return;
+      btn.textContent = "...";
+      btn.setAttribute("disabled", "true");
+      try {
+        const data = await apiCall("DELETE", { id });
+        if (data.error) {
+          alert("Erreur: " + data.error);
+        } else {
+          loadUsers();
+        }
+      } catch (err: any) {
+        alert("Erreur: " + err.message);
+      }
+    }
+
+    /* ─── LIST USERS ─── */
     async function loadUsers() {
       const container = document.getElementById("users-list")!;
-      const client = getSupabase();
-      if (!client) { container.innerHTML = `<p class="text-sm text-zinc-500 text-center py-4">Supabase non configuré</p>`; return; }
-      const { data } = await client.auth.getSession();
-      const user = data?.session?.user;
-      if (!user) {
-        container.innerHTML = `<p class="text-sm text-zinc-500 text-center py-4">Non connecté</p>`;
-        return;
-      }
-      container.innerHTML = `
-        <div class="flex items-center justify-between p-3 bg-zinc-800/50 border border-zinc-700/50 rounded-xl">
-          <div>
-            <p class="text-sm font-medium text-white">${esc(user.email || "")}</p>
-            <p class="text-xs text-zinc-400 mt-0.5">ID: ${user.id.slice(0, 8)}...</p>
+      container.innerHTML = `<p class="text-sm text-zinc-500 text-center py-4">Chargement...</p>`;
+      try {
+        const users = await apiCall("GET");
+        if (users.error) {
+          container.innerHTML = `<p class="text-sm text-red-400 text-center py-4">${esc(users.error)}</p>`;
+          return;
+        }
+        if (!Array.isArray(users) || users.length === 0) {
+          container.innerHTML = `<p class="text-sm text-zinc-500 text-center py-4">Aucun utilisateur</p>`;
+          return;
+        }
+        container.innerHTML = users.map((u: any) => `
+          <div class="flex items-center justify-between p-3 bg-zinc-800/50 border border-zinc-700/50 rounded-xl">
+            <div class="min-w-0 flex-1">
+              <p class="text-sm font-medium text-white truncate">${esc(u.email || "—")}</p>
+              <p class="text-xs text-zinc-400 mt-0.5">${u.last_sign_in_at ? "Dernière connexion: " + new Date(u.last_sign_in_at).toLocaleDateString("fr-FR") : "Jamais connecté"}</p>
+            </div>
+            <div class="flex items-center gap-2 ml-3 shrink-0">
+              <span class="text-xs px-2 py-1 rounded-full ${u.last_sign_in_at ? "bg-emerald-500/15 text-emerald-400" : "bg-zinc-700 text-zinc-400"}">
+                ${u.last_sign_in_at ? "Actif" : "Invité"}
+              </span>
+              <button data-delete-user="${u.id}" class="p-1.5 rounded-lg bg-red-500/15 text-red-400 hover:bg-red-500/25 transition-colors" title="Supprimer">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+              </button>
+            </div>
           </div>
-          <span class="text-xs px-2 py-1 rounded-full bg-emerald-500/15 text-emerald-400">Connecté</span>
-        </div>
-        <p class="text-xs text-zinc-500 text-center mt-3">Pour gérer tous les comptes, utilisez le <a href="https://supabase.com/dashboard" target="_blank" class="text-zinc-400 underline hover:text-white">Supabase Dashboard</a> → Authentication → Users</p>
-      `;
+        `).join("");
+
+        container.querySelectorAll("[data-delete-user]").forEach(btn => {
+          btn.addEventListener("click", () => {
+            deleteUser((btn as HTMLElement).dataset.deleteUser!, btn as HTMLElement);
+          });
+        });
+      } catch (err: any) {
+        container.innerHTML = `<p class="text-sm text-red-400 text-center py-4">${esc(err.message)}</p>`;
+      }
     }
+
+    /* ─── CHANGE PASSWORD ─── */
+    const pwForm = document.getElementById("change-pw-form") as HTMLFormElement;
+    const pwMsg = document.getElementById("pw-msg")!;
+    const pwBtn = document.getElementById("pw-btn") as HTMLButtonElement;
+
+    pwForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      pwMsg.className = "hidden";
+      const np = (document.getElementById("new-pw") as HTMLInputElement).value;
+      const cp = (document.getElementById("confirm-pw") as HTMLInputElement).value;
+      if (np !== cp) { showMsg(pwMsg, "Les mots de passe ne correspondent pas.", false); return; }
+      pwBtn.disabled = true;
+      pwBtn.textContent = "Mise à jour...";
+      const client = getSupabase();
+      if (!client) { showMsg(pwMsg, "Supabase non configuré.", false); pwBtn.disabled = false; pwBtn.textContent = "Mettre à jour"; return; }
+      const { error } = await client.auth.updateUser({ password: np });
+      if (error) showMsg(pwMsg, error.message, false);
+      else { showMsg(pwMsg, "Mot de passe modifié !", true); pwForm.reset(); }
+      pwBtn.disabled = false;
+      pwBtn.textContent = "Mettre à jour";
+    });
 
     function esc(str: string): string {
       const div = document.createElement("div");
-      div.textContent = str;
+      div.textContent = str || "";
       return div.innerHTML;
     }
 
+    document.getElementById("refresh-users")?.addEventListener("click", loadUsers);
     loadUsers();
   </script>
 </AdminLayout>

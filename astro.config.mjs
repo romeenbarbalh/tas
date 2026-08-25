@@ -3,6 +3,7 @@ import { defineConfig } from 'astro/config';
 import tailwindcss from '@tailwindcss/vite';
 import sitemap from '@astrojs/sitemap';
 import react from '@astrojs/react';
+import vercel from '@astrojs/vercel';
 
 // https://astro.build/config
 export default defineConfig({
@@ -16,6 +17,7 @@ export default defineConfig({
     plugins: [tailwindcss()],
   },
   integrations: [sitemap(), react()],
+  adapter: vercel(),
   prefetch: true,
   compressHTML: true,
 });
