@@ -1,10 +1,15 @@
 ---
 export const prerender = true;
 import AdminLayout from "../../layouts/AdminLayout.astro";
+import DailyFinancialCard from "../../components/admin/DailyFinancialCard";
 ---
 
 <AdminLayout title="Rendez-vous">
   <div id="app" class="space-y-6">
+
+    <!-- Daily Financial Summary -->
+    <DailyFinancialCard client:load />
+
     <!-- Stats -->
     <div class="grid grid-cols-2 md:grid-cols-4 gap-3" id="stats-grid">
       <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
