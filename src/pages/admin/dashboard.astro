@@ -6,10 +6,6 @@ import DailyFinancialCard from "../../components/admin/DailyFinancialCard";
 
 <AdminLayout title="Rendez-vous">
   <div id="app" class="space-y-6">
-
-    <!-- Daily Financial Summary -->
-    <DailyFinancialCard client:load />
-
     <!-- Stats -->
     <div class="grid grid-cols-2 md:grid-cols-4 gap-3" id="stats-grid">
       <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
@@ -40,6 +36,9 @@ import DailyFinancialCard from "../../components/admin/DailyFinancialCard";
       </button>
       <button id="tab-calendar" class="px-4 py-2 text-sm font-medium rounded-lg text-zinc-400 hover:text-white transition-colors">
         Calendrier
+      </button>
+      <button id="tab-resume" class="px-4 py-2 text-sm font-medium rounded-lg text-zinc-400 hover:text-white transition-colors">
+        Résumé
       </button>
     </div>
 
@@ -109,6 +108,11 @@ import DailyFinancialCard from "../../components/admin/DailyFinancialCard";
           </div>
         </div>
       </div>
+    </div>
+
+    <!-- RESUME VIEW -->
+    <div id="view-resume" class="hidden">
+      <DailyFinancialCard client:load />
     </div>
   </div>
 
@@ -435,24 +439,35 @@ import DailyFinancialCard from "../../components/admin/DailyFinancialCard";
     /* ─── TABS ─── */
     const tabList = document.getElementById("tab-list")!;
     const tabCal = document.getElementById("tab-calendar")!;
+    const tabResume = document.getElementById("tab-resume")!;
     const viewList = document.getElementById("view-list")!;
     const viewCal = document.getElementById("view-calendar")!;
+    const viewResume = document.getElementById("view-resume")!;
+
+    function setActiveTab(active: string) {
+      const tabs = [tabList, tabCal, tabResume];
+      const views = [viewList, viewCal, viewResume];
+      tabs.forEach(t => t.className = "px-4 py-2 text-sm font-medium rounded-lg text-zinc-400 hover:text-white transition-colors");
+      views.forEach(v => v.classList.add("hidden"));
+      const activeTab = active === "list" ? tabList : active === "calendar" ? tabCal : tabResume;
+      const activeView = active === "list" ? viewList : active === "calendar" ? viewCal : viewResume;
+      activeTab.className = "px-4 py-2 text-sm font-medium rounded-lg bg-white text-zinc-900 transition-colors";
+      activeView.classList.remove("hidden");
+    }
 
     tabList.addEventListener("click", () => {
-      tabList.className = "px-4 py-2 text-sm font-medium rounded-lg bg-white text-zinc-900 transition-colors";
-      tabCal.className = "px-4 py-2 text-sm font-medium rounded-lg text-zinc-400 hover:text-white transition-colors";
-      viewList.classList.remove("hidden");
-      viewCal.classList.add("hidden");
+      setActiveTab("list");
       renderList();
     });
 
     tabCal.addEventListener("click", () => {
-      tabCal.className = "px-4 py-2 text-sm font-medium rounded-lg bg-white text-zinc-900 transition-colors";
-      tabList.className = "px-4 py-2 text-sm font-medium rounded-lg text-zinc-400 hover:text-white transition-colors";
-      viewCal.classList.remove("hidden");
-      viewList.classList.add("hidden");
+      setActiveTab("calendar");
       renderCalendar();
       renderDayBookings();
+    });
+
+    tabResume.addEventListener("click", () => {
+      setActiveTab("resume");
     });
 
     document.getElementById("prev-month")!.addEventListener("click", () => {
