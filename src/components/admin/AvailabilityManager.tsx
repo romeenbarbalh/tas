@@ -184,6 +184,34 @@ export default function AvailabilityManager() {
     setSaving(false);
   };
 
+  const resetAll = async () => {
+    setSaving(true);
+    const prevSlots = [...slots];
+    setSlots([]);
+
+    try {
+      const session = await supabase.auth.getSession();
+      const token = session.data.session?.access_token;
+      if (!token) { setSlots(prevSlots); setSaving(false); return; }
+
+      const res = await fetch("/api/availability", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ slot_date: date }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        console.error("Availability reset error:", err);
+        setSlots(prevSlots);
+        alert("Erreur: " + (err.error || "Impossible de réinitialiser"));
+      }
+    } catch (e) {
+      console.error("Availability reset error:", e);
+      setSlots(prevSlots);
+    }
+    setSaving(false);
+  };
+
   const copyDay = async (targetDate: string) => {
     setSaving(true);
     const copySlots = slots.map((s) => ({
@@ -273,6 +301,10 @@ export default function AvailabilityManager() {
           <button onClick={() => toggleAll(false)} disabled={saving}
             className="px-3 py-1.5 text-xs font-medium rounded-lg bg-red-500/15 text-red-400 hover:bg-red-500/25 transition-colors disabled:opacity-50">
             Tout fermer
+          </button>
+          <button onClick={resetAll} disabled={saving}
+            className="px-3 py-1.5 text-xs font-medium rounded-lg bg-zinc-600/20 text-zinc-400 hover:bg-zinc-600/30 hover:text-zinc-300 transition-colors disabled:opacity-50">
+            Tout Non défini
           </button>
           <div className="relative">
             <button onClick={() => setCopyOpen(!copyOpen)}
