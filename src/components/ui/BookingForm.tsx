@@ -385,18 +385,42 @@ export default function BookingForm({ locale, services, team }: Props) {
 
   useEffect(() => {
     if (formData.date && formData.barberId) {
-      // Fetch taken slots from Supabase for this date + barber
-      supabase
+      const barberName = team.find((t) => t.id === formData.barberId)?.name || "";
+
+      // Fetch taken slots from bookings
+      const bookingsPromise = supabase
         .from("bookings")
         .select("booking_time")
         .eq("booking_date", formData.date)
-        .eq("barber", team.find((t) => t.id === formData.barberId)?.name || "")
-        .in("status", ["pending", "confirmed"])
-        .then(({ data }) => {
-          const taken = (data || []).map((r) => r.booking_time);
-          setAvailableSlots(TIME_SLOTS.filter((s) => !taken.includes(s)));
-          if (formData.time && taken.includes(formData.time)) setFormData((p) => ({ ...p, time: "" }));
-        });
+        .eq("barber", barberName)
+        .in("status", ["pending", "confirmed"]);
+
+      // Fetch availability settings
+      const availPromise = supabase
+        .from("availability")
+        .select("slot_time, is_available")
+        .eq("slot_date", formData.date)
+        .eq("barber", barberName);
+
+      Promise.all([bookingsPromise, availPromise]).then(([bookingsRes, availRes]) => {
+        const taken = (bookingsRes.data || []).map((r) => r.booking_time);
+        const availData = availRes.data || [];
+
+        let available: string[];
+        if (availData.length > 0) {
+          // Admin has set availability — only show slots marked available AND not booked
+          const allowed = new Set(availData.filter((a) => a.is_available).map((a) => a.slot_time));
+          available = TIME_SLOTS.filter((s) => allowed.has(s) && !taken.includes(s));
+        } else {
+          // No availability set — show all except booked (backward compatible)
+          available = TIME_SLOTS.filter((s) => !taken.includes(s));
+        }
+
+        setAvailableSlots(available);
+        if (formData.time && !available.includes(formData.time)) {
+          setFormData((p) => ({ ...p, time: "" }));
+        }
+      });
     } else {
       setAvailableSlots(TIME_SLOTS);
     }

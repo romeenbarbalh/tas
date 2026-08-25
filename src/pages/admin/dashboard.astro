@@ -2,6 +2,7 @@
 export const prerender = true;
 import AdminLayout from "../../layouts/AdminLayout.astro";
 import DailyFinancialCard from "../../components/admin/DailyFinancialCard";
+import AvailabilityManager from "../../components/admin/AvailabilityManager";
 ---
 
 <AdminLayout title="Rendez-vous">
@@ -39,6 +40,9 @@ import DailyFinancialCard from "../../components/admin/DailyFinancialCard";
       </button>
       <button id="tab-resume" class="px-4 py-2 text-sm font-medium rounded-lg text-zinc-400 hover:text-white transition-colors">
         Résumé
+      </button>
+      <button id="tab-dispo" class="px-4 py-2 text-sm font-medium rounded-lg text-zinc-400 hover:text-white transition-colors">
+        Disponibilités
       </button>
     </div>
 
@@ -113,6 +117,13 @@ import DailyFinancialCard from "../../components/admin/DailyFinancialCard";
     <!-- RESUME VIEW -->
     <div id="view-resume" class="hidden">
       <DailyFinancialCard client:load />
+    </div>
+
+    <!-- DISPONIBILITES VIEW -->
+    <div id="view-dispo" class="hidden">
+      <div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-5">
+        <AvailabilityManager client:load />
+      </div>
     </div>
   </div>
 
@@ -440,19 +451,26 @@ import DailyFinancialCard from "../../components/admin/DailyFinancialCard";
     const tabList = document.getElementById("tab-list")!;
     const tabCal = document.getElementById("tab-calendar")!;
     const tabResume = document.getElementById("tab-resume")!;
+    const tabDispo = document.getElementById("tab-dispo")!;
     const viewList = document.getElementById("view-list")!;
     const viewCal = document.getElementById("view-calendar")!;
     const viewResume = document.getElementById("view-resume")!;
+    const viewDispo = document.getElementById("view-dispo")!;
 
     function setActiveTab(active: string) {
-      const tabs = [tabList, tabCal, tabResume];
-      const views = [viewList, viewCal, viewResume];
+      const tabs = [tabList, tabCal, tabResume, tabDispo];
+      const views = [viewList, viewCal, viewResume, viewDispo];
       tabs.forEach(t => t.className = "px-4 py-2 text-sm font-medium rounded-lg text-zinc-400 hover:text-white transition-colors");
       views.forEach(v => v.classList.add("hidden"));
-      const activeTab = active === "list" ? tabList : active === "calendar" ? tabCal : tabResume;
-      const activeView = active === "list" ? viewList : active === "calendar" ? viewCal : viewResume;
-      activeTab.className = "px-4 py-2 text-sm font-medium rounded-lg bg-white text-zinc-900 transition-colors";
-      activeView.classList.remove("hidden");
+      const map: Record<string, [typeof tabList, typeof viewList]> = {
+        list: [tabList, viewList],
+        calendar: [tabCal, viewCal],
+        resume: [tabResume, viewResume],
+        dispo: [tabDispo, viewDispo],
+      };
+      const [tab, view] = map[active] || map.list;
+      tab.className = "px-4 py-2 text-sm font-medium rounded-lg bg-white text-zinc-900 transition-colors";
+      view.classList.remove("hidden");
     }
 
     tabList.addEventListener("click", () => {
@@ -468,6 +486,10 @@ import DailyFinancialCard from "../../components/admin/DailyFinancialCard";
 
     tabResume.addEventListener("click", () => {
       setActiveTab("resume");
+    });
+
+    tabDispo.addEventListener("click", () => {
+      setActiveTab("dispo");
     });
 
     document.getElementById("prev-month")!.addEventListener("click", () => {
