@@ -77,6 +77,7 @@ export default function AvailabilityManager() {
     const newVal = existing ? !existing.is_available : true;
 
     // Optimistic update
+    const prevSlots = [...slots];
     setSlots((prev) => {
       const idx = prev.findIndex((s) => s.barber === barber && s.slot_time === time);
       if (idx >= 0) {
@@ -87,15 +88,30 @@ export default function AvailabilityManager() {
       return [...prev, { barber, slot_date: date, slot_time: time, is_available: newVal }];
     });
 
-    const session = await supabase.auth.getSession();
-    const token = session.data.session?.access_token;
-    if (!token) return;
+    try {
+      const session = await supabase.auth.getSession();
+      const token = session.data.session?.access_token;
+      if (!token) { setSlots(prevSlots); return; }
 
-    await fetch("/api/availability", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ barber, slot_date: date, slot_time: time, is_available: newVal }),
-    });
+      const res = await fetch("/api/availability", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ barber, slot_date: date, slot_time: time, is_available: newVal }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        console.error("Availability save error:", err);
+        setSlots(prevSlots);
+        alert("Erreur: " + (err.error || "Impossible de sauvegarder"));
+        return;
+      }
+      // Re-fetch to confirm
+      load(date);
+    } catch (e) {
+      console.error("Availability fetch error:", e);
+      setSlots(prevSlots);
+      alert("Erreur de connexion. Réessayez.");
+    }
   };
 
   const toggleRow = async (barber: string, available: boolean) => {
@@ -103,20 +119,34 @@ export default function AvailabilityManager() {
     const newSlots = HOURS.map((h) => ({ barber, slot_date: date, slot_time: h, is_available: available }));
 
     // Optimistic
+    const prevSlots = [...slots];
     setSlots((prev) => {
       const filtered = prev.filter((s) => s.barber !== barber);
       return [...filtered, ...newSlots];
     });
 
-    const session = await supabase.auth.getSession();
-    const token = session.data.session?.access_token;
-    if (!token) { setSaving(false); return; }
+    try {
+      const session = await supabase.auth.getSession();
+      const token = session.data.session?.access_token;
+      if (!token) { setSlots(prevSlots); setSaving(false); return; }
 
-    await fetch("/api/availability", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ slots: newSlots }),
-    });
+      const res = await fetch("/api/availability", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ slots: newSlots }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        console.error("Availability row save error:", err);
+        setSlots(prevSlots);
+        alert("Erreur: " + (err.error || "Impossible de sauvegarder"));
+      } else {
+        load(date);
+      }
+    } catch (e) {
+      console.error("Availability row fetch error:", e);
+      setSlots(prevSlots);
+    }
     setSaving(false);
   };
 
@@ -126,17 +156,31 @@ export default function AvailabilityManager() {
       HOURS.map((h) => ({ barber: b, slot_date: date, slot_time: h, is_available: available }))
     );
 
+    const prevSlots = [...slots];
     setSlots(allSlots);
 
-    const session = await supabase.auth.getSession();
-    const token = session.data.session?.access_token;
-    if (!token) { setSaving(false); return; }
+    try {
+      const session = await supabase.auth.getSession();
+      const token = session.data.session?.access_token;
+      if (!token) { setSlots(prevSlots); setSaving(false); return; }
 
-    await fetch("/api/availability", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ slots: allSlots }),
-    });
+      const res = await fetch("/api/availability", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ slots: allSlots }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        console.error("Availability bulk save error:", err);
+        setSlots(prevSlots);
+        alert("Erreur: " + (err.error || "Impossible de sauvegarder"));
+      } else {
+        load(date);
+      }
+    } catch (e) {
+      console.error("Availability bulk fetch error:", e);
+      setSlots(prevSlots);
+    }
     setSaving(false);
   };
 
