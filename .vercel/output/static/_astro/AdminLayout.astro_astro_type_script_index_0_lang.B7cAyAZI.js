@@ -1,1 +1,0 @@
-import{n as e}from"./supabase.DdMF51nB.js";document.getElementById(`logout-btn`)?.addEventListener(`click`,async()=>{await e.auth.signOut(),window.location.href=`/admin/`}),e.auth.getSession().then(({data:{session:e}})=>{!e&&!window.location.pathname.endsWith(`/admin/`)&&(window.location.href=`/admin/`)});
