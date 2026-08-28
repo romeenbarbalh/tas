@@ -3,6 +3,7 @@ export const prerender = true;
 import AdminLayout from "../../layouts/AdminLayout.astro";
 import DailyFinancialCard from "../../components/admin/DailyFinancialCard";
 import AvailabilityManager from "../../components/admin/AvailabilityManager";
+import ScheduleManager from "../../components/admin/ScheduleManager";
 ---
 
 <AdminLayout title="Rendez-vous">
@@ -43,6 +44,9 @@ import AvailabilityManager from "../../components/admin/AvailabilityManager";
       </button>
       <button id="tab-dispo" class="px-4 py-2 text-sm font-medium rounded-lg text-zinc-400 hover:text-white transition-colors">
         Disponibilités
+      </button>
+      <button id="tab-horaires" class="px-4 py-2 text-sm font-medium rounded-lg text-zinc-400 hover:text-white transition-colors">
+        Horaires
       </button>
     </div>
 
@@ -123,6 +127,13 @@ import AvailabilityManager from "../../components/admin/AvailabilityManager";
     <div id="view-dispo" class="hidden">
       <div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-5">
         <AvailabilityManager client:load />
+      </div>
+    </div>
+
+    <!-- HORAIRES VIEW -->
+    <div id="view-horaires" class="hidden">
+      <div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-5">
+        <ScheduleManager client:load />
       </div>
     </div>
   </div>
@@ -452,14 +463,16 @@ import AvailabilityManager from "../../components/admin/AvailabilityManager";
     const tabCal = document.getElementById("tab-calendar")!;
     const tabResume = document.getElementById("tab-resume")!;
     const tabDispo = document.getElementById("tab-dispo")!;
+    const tabHoraires = document.getElementById("tab-horaires")!;
     const viewList = document.getElementById("view-list")!;
     const viewCal = document.getElementById("view-calendar")!;
     const viewResume = document.getElementById("view-resume")!;
     const viewDispo = document.getElementById("view-dispo")!;
+    const viewHoraires = document.getElementById("view-horaires")!;
 
     function setActiveTab(active: string) {
-      const tabs = [tabList, tabCal, tabResume, tabDispo];
-      const views = [viewList, viewCal, viewResume, viewDispo];
+      const tabs = [tabList, tabCal, tabResume, tabDispo, tabHoraires];
+      const views = [viewList, viewCal, viewResume, viewDispo, viewHoraires];
       tabs.forEach(t => t.className = "px-4 py-2 text-sm font-medium rounded-lg text-zinc-400 hover:text-white transition-colors");
       views.forEach(v => v.classList.add("hidden"));
       const map: Record<string, [typeof tabList, typeof viewList]> = {
@@ -467,6 +480,7 @@ import AvailabilityManager from "../../components/admin/AvailabilityManager";
         calendar: [tabCal, viewCal],
         resume: [tabResume, viewResume],
         dispo: [tabDispo, viewDispo],
+        horaires: [tabHoraires, viewHoraires],
       };
       const [tab, view] = map[active] || map.list;
       tab.className = "px-4 py-2 text-sm font-medium rounded-lg bg-white text-zinc-900 transition-colors";
@@ -490,6 +504,10 @@ import AvailabilityManager from "../../components/admin/AvailabilityManager";
 
     tabDispo.addEventListener("click", () => {
       setActiveTab("dispo");
+    });
+
+    tabHoraires.addEventListener("click", () => {
+      setActiveTab("horaires");
     });
 
     document.getElementById("prev-month")!.addEventListener("click", () => {

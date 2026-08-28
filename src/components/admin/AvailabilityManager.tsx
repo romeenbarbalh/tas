@@ -30,6 +30,28 @@ interface Booking {
   barber: string;
 }
 
+interface SalonHour { day_of_week: number; open_time: string | null; close_time: string | null; is_closed: boolean; }
+interface Schedule { barber: string; day_of_week: number; start_time: string; end_time: string; is_working: boolean; }
+interface DayOff { barber: string; off_date: string; }
+
+const toMin = (t: string) => {
+  const [h, m] = t.split(":").map(Number);
+  return h * 60 + m;
+};
+
+async function api(token: string, method: string, path: string, body?: any) {
+  const res = await fetch(path, {
+    method,
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error((err as any).error || "Erreur");
+  }
+  return res.json();
+}
+
 export default function AvailabilityManager() {
   const [date, setDate] = useState(() => {
     const d = new Date();
@@ -37,6 +59,9 @@ export default function AvailabilityManager() {
   });
   const [slots, setSlots] = useState<Slot[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [salonHour, setSalonHour] = useState<SalonHour | null>(null);
+  const [stylistSchedules, setStylistSchedules] = useState<Schedule[]>([]);
+  const [daysOff, setDaysOff] = useState<DayOff[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [copyOpen, setCopyOpen] = useState(false);
@@ -47,7 +72,9 @@ export default function AvailabilityManager() {
     const token = session.data.session?.access_token;
     if (!token) return;
 
-    // Load availability
+    const dow = (new Date(d + "T00:00:00").getDay() + 6) % 7; // Mon=0
+
+    // Load availability (layer 3 manual blocks)
     const res = await fetch(`/api/availability?date=${d}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
@@ -60,10 +87,36 @@ export default function AvailabilityManager() {
       .eq("booking_date", d)
       .in("status", ["pending", "confirmed"]);
     setBookings((data as Booking[]) || []);
+
+    // Load salon hours + stylist schedules + days off (layers 1 & 2)
+    try {
+      const data2 = await api(token, "GET", "/api/schedule");
+      setSalonHour((data2.hours || []).find((h: SalonHour) => h.day_of_week === dow) || null);
+      setStylistSchedules(data2.schedule || []);
+      setDaysOff((data2.daysOff || []).filter((o: DayOff) => o.off_date === d));
+    } catch (e) {
+      console.error("Error loading schedule:", e);
+    }
+
     setLoading(false);
   }, []);
 
   useEffect(() => { load(date); }, [date, load]);
+
+  // Layer 1 + 2 helpers
+  const isSalonOpen = salonHour && !salonHour.is_closed && salonHour.open_time && salonHour.close_time;
+  const isStylistWorking = (barber: string) => {
+    const off = daysOff.some((o) => o.barber === barber);
+    if (off) return false;
+    const s = stylistSchedules.find((x) => x.barber === barber);
+    if (!s) return true; // no schedule set -> assume available
+    return s.is_working;
+  };
+  const stylistRange = (barber: string): [number, number] => {
+    const s = stylistSchedules.find((x) => x.barber === barber);
+    if (s && s.is_working) return [toMin(s.start_time), toMin(s.end_time)];
+    return [-1, -1];
+  };
 
   const isBooked = (barber: string, time: string) =>
     bookings.some((b) => b.barber === barber && b.booking_time === time);
@@ -336,12 +389,21 @@ export default function AvailabilityManager() {
       </div>
 
       {/* Legend */}
-      <div className="flex gap-4 text-xs text-zinc-500">
+      <div className="flex flex-wrap gap-4 text-xs text-zinc-500">
         <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-emerald-500/30 border border-emerald-500/50"></span> Disponible</span>
-        <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-red-500/30 border border-red-500/50"></span> Fermé</span>
+        <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-red-500/30 border border-red-500/50"></span> Fermé (bloqué)</span>
         <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-zinc-600/30 border border-zinc-600/50"></span> Non défini</span>
         <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-amber-500/30 border border-amber-500/50"></span> Réservé</span>
+        <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-zinc-900/60 border border-dashed border-zinc-700"></span> Hors salon</span>
+        <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-indigo-500/20 border border-dashed border-indigo-500/40"></span> Styliste absent</span>
       </div>
+
+      {!isSalonOpen && (
+        <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl px-4 py-3 text-sm text-amber-300">
+          ⚠️ Le salon est fermé ce jour ({new Date(date + "T00:00:00").toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}).
+          Aucune réservation ne sera possible.
+        </div>
+      )}
 
       {loading ? (
         <div className="text-center py-12 text-zinc-500 text-sm">Chargement...</div>
@@ -364,25 +426,52 @@ export default function AvailabilityManager() {
                   {HOURS.map((h) => {
                     const slot = getSlot(barber, h);
                     const booked = isBooked(barber, h);
-                    let bg = "bg-zinc-800/40 hover:bg-zinc-700/60"; // default (undefined)
+                    const tMin = toMin(h);
+
+                    // Layer 1: salon closed or outside salon hours
+                    const outsideSalon = !isSalonOpen ||
+                      (isSalonOpen && (tMin < toMin(isSalonOpen.open_time!) || tMin >= toMin(isSalonOpen.close_time!)));
+                    // Layer 2: stylist off-duty / outside their range
+                    const stylistOff = !isStylistWorking(barber);
+                    const [sStart, sEnd] = stylistRange(barber);
+                    const outsideStylist = stylistOff || (tMin < sStart || tMin >= sEnd);
+
+                    let bg = "bg-zinc-800/40 hover:bg-zinc-700/60";
                     let border = "border-zinc-700/30";
+                    let disabled = false;
+                    let title = "Non défini";
+
                     if (booked) {
                       bg = "bg-amber-500/20";
                       border = "border-amber-500/40";
+                      disabled = true;
+                      title = "Réservé";
+                    } else if (outsideSalon) {
+                      bg = "bg-zinc-900/50 border-dashed";
+                      border = "border-zinc-800";
+                      disabled = true;
+                      title = "Hors horaires du salon";
+                    } else if (outsideStylist) {
+                      bg = "bg-indigo-500/10 border-dashed";
+                      border = "border-indigo-500/30";
+                      disabled = true;
+                      title = "Styliste absent / hors planning";
                     } else if (slot?.is_available) {
                       bg = "bg-emerald-500/20 hover:bg-emerald-500/30";
                       border = "border-emerald-500/40";
+                      title = "Disponible — cliquer pour fermer";
                     } else if (slot && !slot.is_available) {
                       bg = "bg-red-500/15 hover:bg-red-500/25";
                       border = "border-red-500/30";
+                      title = "Fermé — cliquer pour ouvrir";
                     }
                     return (
                       <td key={h} className="px-0.5 py-1">
                         <button
-                          onClick={() => toggleSlot(barber, h)}
-                          disabled={booked}
-                          title={booked ? "Réservé" : slot?.is_available ? "Disponible — cliquer pour fermer" : "Fermé — cliquer pour ouvrir"}
-                          className={`w-full h-8 rounded border transition-all duration-100 ${bg} ${border} ${booked ? "cursor-not-allowed opacity-70" : "cursor-pointer"}`}
+                          onClick={() => (booked || outsideSalon || outsideStylist) ? undefined : toggleSlot(barber, h)}
+                          disabled={disabled}
+                          title={title}
+                          className={`w-full h-8 rounded border transition-all duration-100 ${bg} ${border} ${disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}
                         />
                       </td>
                     );
