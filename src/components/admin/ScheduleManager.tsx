@@ -1,5 +1,5 @@
 ﻿import { useState, useEffect, useCallback } from "react";
-import { supabase } from "../../lib/supabase";
+import { supabase, getAuthToken } from "../../lib/supabase";
 
 const BARBERS = [
   "Hairbydm",
@@ -52,9 +52,11 @@ export default function ScheduleManager() {
   const [offReason, setOffReason] = useState("");
 
   const load = useCallback(async () => {
-    const session = await supabase.auth.getSession();
-    const tok = session.data.session?.access_token;
-    if (!tok) return;
+    const tok = await getAuthToken();
+    if (!tok) {
+      window.location.href = "/admin/";
+      return;
+    }
     setToken(tok);
     setLoading(true);
     try {

@@ -1,5 +1,5 @@
 ﻿import { useState, useEffect, useCallback } from "react";
-import { supabase } from "../../lib/supabase";
+import { supabase, getAuthToken } from "../../lib/supabase";
 
 const BARBERS = [
   "Hairbydm",
@@ -68,8 +68,7 @@ export default function AvailabilityManager() {
 
   const load = useCallback(async (d: string) => {
     setLoading(true);
-    const session = await supabase.auth.getSession();
-    const token = session.data.session?.access_token;
+    const token = await getAuthToken();
     if (!token) return;
 
     const dow = (new Date(d + "T00:00:00").getDay() + 6) % 7; // Mon=0
@@ -142,8 +141,7 @@ export default function AvailabilityManager() {
     });
 
     try {
-      const session = await supabase.auth.getSession();
-      const token = session.data.session?.access_token;
+      const token = await getAuthToken();
       if (!token) { setSlots(prevSlots); return; }
 
       const res = await fetch("/api/availability/", {
@@ -179,8 +177,7 @@ export default function AvailabilityManager() {
     });
 
     try {
-      const session = await supabase.auth.getSession();
-      const token = session.data.session?.access_token;
+      const token = await getAuthToken();
       if (!token) { setSlots(prevSlots); setSaving(false); return; }
 
       const res = await fetch("/api/availability/", {
@@ -213,8 +210,7 @@ export default function AvailabilityManager() {
     setSlots(allSlots);
 
     try {
-      const session = await supabase.auth.getSession();
-      const token = session.data.session?.access_token;
+      const token = await getAuthToken();
       if (!token) { setSlots(prevSlots); setSaving(false); return; }
 
       const res = await fetch("/api/availability/", {
@@ -243,8 +239,7 @@ export default function AvailabilityManager() {
     setSlots([]);
 
     try {
-      const session = await supabase.auth.getSession();
-      const token = session.data.session?.access_token;
+      const token = await getAuthToken();
       if (!token) { setSlots(prevSlots); setSaving(false); return; }
 
       const res = await fetch("/api/availability/", {
@@ -272,8 +267,7 @@ export default function AvailabilityManager() {
       slot_date: targetDate,
     }));
 
-    const session = await supabase.auth.getSession();
-    const token = session.data.session?.access_token;
+    const token = await getAuthToken();
     if (!token) { setSaving(false); return; }
 
     await fetch("/api/availability/", {
@@ -314,8 +308,7 @@ export default function AvailabilityManager() {
       allCopies.push(...daySlots);
     }
 
-    const session = await supabase.auth.getSession();
-    const token = session.data.session?.access_token;
+    const token = await getAuthToken();
     if (!token) { setSaving(false); return; }
 
     await fetch("/api/availability/", {

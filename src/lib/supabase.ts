@@ -23,3 +23,14 @@ export const supabase = new Proxy({} as SupabaseClient, {
     return (client as Record<string | symbol, unknown>)[prop];
   },
 });
+
+// Return a fresh, validated access token. force-revalidates the session and
+// refreshes the access token if expired (getSession alone returns a cached one).
+export async function getAuthToken(): Promise<string | null> {
+  const client = getSupabase();
+  if (!client) return null;
+  const { data: { user }, error } = await client.auth.getUser();
+  if (error || !user) return null;
+  const session = await client.auth.getSession();
+  return session.data.session?.access_token ?? null;
+}
