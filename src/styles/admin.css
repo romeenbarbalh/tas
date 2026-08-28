@@ -1,0 +1,76 @@
+@import "tailwindcss";
+
+@theme {
+  /* Admin monochrome theme - black & white only */
+  --color-background: #0a0a0b;
+  --color-surface: #121215;
+  --color-surface-2: #19191d;
+  --color-gold: #ffffff;
+  --color-gold-light: #e4e4e7;
+  --color-gold-dark: #d4d4d8;
+  --color-muted: #8a8a94;
+
+  /* Force the whole admin palette to black/white/gray */
+  --color-emerald-300: #ffffff;
+  --color-emerald-400: #ffffff;
+  --color-emerald-500: #ffffff;
+  --color-amber-300: #ffffff;
+  --color-amber-400: #ffffff;
+  --color-amber-500: #ffffff;
+  --color-red-300: #d4d4d8;
+  --color-red-400: #d4d4d8;
+  --color-red-500: #a1a1aa;
+  --color-indigo-400: #a1a1aa;
+  --color-indigo-500: #a1a1aa;
+
+  /* Fonts for admin (serif display) */
+  --font-sans: "Inter", system-ui, sans-serif;
+  --font-serif: "Syne", "Space Grotesk", system-ui, sans-serif;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+
+  body {
+    @apply bg-background text-white font-sans antialiased;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    color-scheme: dark;
+  }
+
+  ::selection {
+    @apply bg-gold text-background;
+  }
+
+  :focus-visible {
+    @apply outline-none ring-2 ring-gold ring-offset-2 ring-offset-background;
+  }
+
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-background;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-surface-2 rounded-full;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-gold/50;
+  }
+}

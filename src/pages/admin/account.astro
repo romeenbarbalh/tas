@@ -7,66 +7,66 @@ import AdminLayout from "../../layouts/AdminLayout.astro";
   <div class="max-w-xl mx-auto space-y-8">
 
     <!-- Create User -->
-    <div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
-      <h2 class="font-display text-lg font-semibold text-white mb-1">Ajouter un utilisateur</h2>
-      <p class="text-sm text-zinc-400 mb-5">Créez un nouveau compte (coiffeur, admin...).</p>
+    <div class="rounded-2xl border border-white/8 bg-surface p-6">
+      <h2 class="mb-1 font-serif text-lg font-semibold text-white">Ajouter un utilisateur</h2>
+      <p class="mb-5 text-sm text-muted">Créez un nouveau compte (coiffeur, admin...).</p>
       <form id="create-user-form" class="space-y-4">
         <div>
-          <label for="new-email" class="block text-sm font-medium text-zinc-300 mb-1.5">Email</label>
+          <label for="new-email" class="mb-1.5 block text-sm font-medium text-white/80">Email</label>
           <input type="email" id="new-email" required
-            class="w-full px-4 py-2.5 bg-zinc-800 border border-zinc-700 rounded-lg text-white text-sm placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-white/20 transition-colors"
+            class="w-full px-4 py-2.5 bg-surface-2 border border-white/10 rounded-lg text-white text-sm placeholder:text-muted/40 focus:outline-none focus:border-gold/50 transition-colors"
             placeholder="nom@email.com" />
         </div>
         <div>
-          <label for="new-password" class="block text-sm font-medium text-zinc-300 mb-1.5">Mot de passe</label>
+          <label for="new-password" class="mb-1.5 block text-sm font-medium text-white/80">Mot de passe</label>
           <input type="password" id="new-password" required minlength="6"
-            class="w-full px-4 py-2.5 bg-zinc-800 border border-zinc-700 rounded-lg text-white text-sm placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-white/20 transition-colors"
+            class="w-full px-4 py-2.5 bg-surface-2 border border-white/10 rounded-lg text-white text-sm placeholder:text-muted/40 focus:outline-none focus:border-gold/50 transition-colors"
             placeholder="6 caractères minimum" />
         </div>
         <div id="create-msg" class="hidden text-sm rounded-lg px-4 py-2"></div>
         <button type="submit" id="create-btn"
-          class="w-full py-2.5 bg-white text-zinc-900 font-medium text-sm rounded-lg hover:bg-zinc-200 transition-colors disabled:opacity-50">
+          class="w-full py-2.5 bg-gold text-background font-semibold text-sm rounded-lg hover:bg-gold-light transition-colors disabled:opacity-50">
           Créer le compte
         </button>
       </form>
     </div>
 
     <!-- Users List -->
-    <div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
+    <div class="rounded-2xl border border-white/8 bg-surface p-6">
       <div class="flex items-center justify-between mb-5">
         <div>
-          <h2 class="font-display text-lg font-semibold text-white mb-1">Utilisateurs</h2>
-          <p class="text-sm text-zinc-400">Liste des comptes existants.</p>
+          <h2 class="mb-1 font-serif text-lg font-semibold text-white">Utilisateurs</h2>
+          <p class="text-sm text-muted">Liste des comptes existants.</p>
         </div>
-        <button id="refresh-users" class="p-2 rounded-lg bg-zinc-800 text-zinc-400 hover:text-white transition-colors" title="Rafraîchir">
+        <button id="refresh-users" class="p-2 rounded-lg bg-surface-2 text-muted hover:text-gold transition-colors" title="Rafraîchir">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
         </button>
       </div>
       <div id="users-list" class="space-y-2">
-        <p class="text-sm text-zinc-500 text-center py-4">Chargement...</p>
+        <p class="text-sm text-muted text-center py-4">Chargement...</p>
       </div>
     </div>
 
     <!-- Change Password -->
-    <div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
-      <h2 class="font-display text-lg font-semibold text-white mb-1">Changer mon mot de passe</h2>
-      <p class="text-sm text-zinc-400 mb-5">Modifiez votre propre mot de passe.</p>
+    <div class="rounded-2xl border border-white/8 bg-surface p-6">
+      <h2 class="mb-1 font-serif text-lg font-semibold text-white">Changer mon mot de passe</h2>
+      <p class="mb-5 text-sm text-muted">Modifiez votre propre mot de passe.</p>
       <form id="change-pw-form" class="space-y-4">
         <div>
-          <label for="new-pw" class="block text-sm font-medium text-zinc-300 mb-1.5">Nouveau mot de passe</label>
+          <label for="new-pw" class="mb-1.5 block text-sm font-medium text-white/80">Nouveau mot de passe</label>
           <input type="password" id="new-pw" required minlength="6"
-            class="w-full px-4 py-2.5 bg-zinc-800 border border-zinc-700 rounded-lg text-white text-sm placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-white/20 transition-colors"
+            class="w-full px-4 py-2.5 bg-surface-2 border border-white/10 rounded-lg text-white text-sm placeholder:text-muted/40 focus:outline-none focus:border-gold/50 transition-colors"
             placeholder="6 caractères minimum" />
         </div>
         <div>
-          <label for="confirm-pw" class="block text-sm font-medium text-zinc-300 mb-1.5">Confirmer</label>
+          <label for="confirm-pw" class="mb-1.5 block text-sm font-medium text-white/80">Confirmer</label>
           <input type="password" id="confirm-pw" required minlength="6"
-            class="w-full px-4 py-2.5 bg-zinc-800 border border-zinc-700 rounded-lg text-white text-sm placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-white/20 transition-colors"
+            class="w-full px-4 py-2.5 bg-surface-2 border border-white/10 rounded-lg text-white text-sm placeholder:text-muted/40 focus:outline-none focus:border-gold/50 transition-colors"
             placeholder="Répétez le mot de passe" />
         </div>
         <div id="pw-msg" class="hidden text-sm rounded-lg px-4 py-2"></div>
         <button type="submit" id="pw-btn"
-          class="w-full py-2.5 bg-white text-zinc-900 font-medium text-sm rounded-lg hover:bg-zinc-200 transition-colors disabled:opacity-50">
+          class="w-full py-2.5 bg-gold text-background font-semibold text-sm rounded-lg hover:bg-gold-light transition-colors disabled:opacity-50">
           Mettre à jour
         </button>
       </form>
@@ -146,7 +146,7 @@ import AdminLayout from "../../layouts/AdminLayout.astro";
     /* ─── LIST USERS ─── */
     async function loadUsers() {
       const container = document.getElementById("users-list")!;
-      container.innerHTML = `<p class="text-sm text-zinc-500 text-center py-4">Chargement...</p>`;
+      container.innerHTML = `<p class="text-sm text-muted text-center py-4">Chargement...</p>`;
       try {
         const users = await apiCall("GET");
         if (users.error) {
@@ -154,17 +154,17 @@ import AdminLayout from "../../layouts/AdminLayout.astro";
           return;
         }
         if (!Array.isArray(users) || users.length === 0) {
-          container.innerHTML = `<p class="text-sm text-zinc-500 text-center py-4">Aucun utilisateur</p>`;
+          container.innerHTML = `<p class="text-sm text-muted text-center py-4">Aucun utilisateur</p>`;
           return;
         }
         container.innerHTML = users.map((u: any) => `
-          <div class="flex items-center justify-between p-3 bg-zinc-800/50 border border-zinc-700/50 rounded-xl">
+          <div class="flex items-center justify-between p-3 bg-surface-2 border border-white/8 rounded-xl">
             <div class="min-w-0 flex-1">
               <p class="text-sm font-medium text-white truncate">${esc(u.email || "—")}</p>
-              <p class="text-xs text-zinc-400 mt-0.5">${u.last_sign_in_at ? "Dernière connexion: " + new Date(u.last_sign_in_at).toLocaleDateString("fr-FR") : "Jamais connecté"}</p>
+              <p class="text-xs text-muted mt-0.5">${u.last_sign_in_at ? "Dernière connexion: " + new Date(u.last_sign_in_at).toLocaleDateString("fr-FR") : "Jamais connecté"}</p>
             </div>
             <div class="flex items-center gap-2 ml-3 shrink-0">
-              <span class="text-xs px-2 py-1 rounded-full ${u.last_sign_in_at ? "bg-emerald-500/15 text-emerald-400" : "bg-zinc-700 text-zinc-400"}">
+              <span class="text-xs px-2 py-1 rounded-full ${u.last_sign_in_at ? "bg-emerald-500/15 text-emerald-400" : "bg-surface-2 text-muted border border-white/10"}">
                 ${u.last_sign_in_at ? "Actif" : "Invité"}
               </span>
               <button data-delete-user="${u.id}" class="p-1.5 rounded-lg bg-red-500/15 text-red-400 hover:bg-red-500/25 transition-colors" title="Supprimer">

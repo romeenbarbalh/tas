@@ -8,12 +8,12 @@ import AdminLayout from "../../layouts/AdminLayout.astro";
     <!-- Header -->
     <div class="flex items-center justify-between">
       <div>
-        <h1 class="font-display text-xl font-bold text-white">Galerie</h1>
-        <p class="text-sm text-zinc-400 mt-1">Gérez les photos et vidéos de votre portfolio</p>
+        <h1 class="font-serif text-2xl font-bold text-white">Galerie</h1>
+        <p class="mt-1 text-sm text-muted">Gérez les photos et vidéos de votre portfolio</p>
       </div>
       <button
         id="upload-btn"
-        class="inline-flex items-center gap-2 px-4 py-2 bg-white text-zinc-900 text-sm font-medium rounded-lg hover:bg-zinc-200 transition-colors"
+        class="inline-flex items-center gap-2 rounded-lg bg-gold px-4 py-2 text-sm font-semibold text-background transition-colors hover:bg-gold-light"
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
         Ajouter
@@ -22,37 +22,37 @@ import AdminLayout from "../../layouts/AdminLayout.astro";
     </div>
 
     <!-- Upload progress -->
-    <div id="upload-progress" class="hidden bg-zinc-900 border border-zinc-800 rounded-xl p-4">
-      <div class="flex items-center gap-3 mb-2">
-        <div class="animate-spin w-4 h-4 border-2 border-white/20 border-t-white rounded-full"></div>
-        <span id="upload-status" class="text-sm text-zinc-300">Upload en cours...</span>
+    <div id="upload-progress" class="hidden rounded-xl border border-white/8 bg-surface p-4">
+      <div class="mb-2 flex items-center gap-3">
+        <div class="h-4 w-4 animate-spin rounded-full border-2 border-white/20 border-t-gold"></div>
+        <span id="upload-status" class="text-sm text-white/80">Upload en cours...</span>
       </div>
-      <div class="h-1.5 bg-zinc-800 rounded-full overflow-hidden">
-        <div id="upload-bar" class="h-full bg-white rounded-full transition-all duration-300" style="width: 0%"></div>
+      <div class="h-1.5 overflow-hidden rounded-full bg-surface-2">
+        <div id="upload-bar" class="h-full rounded-full bg-gold transition-all duration-300" style="width: 0%"></div>
       </div>
     </div>
 
     <!-- Gallery grid -->
-    <div id="gallery-grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-      <div class="col-span-full text-center py-12 text-zinc-500 text-sm">Chargement...</div>
+    <div id="gallery-grid" class="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
+      <div class="col-span-full py-12 text-center text-sm text-muted">Chargement...</div>
     </div>
 
     <!-- Edit modal -->
     <div id="edit-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
       <div class="absolute inset-0 bg-black/70 backdrop-blur-sm" id="modal-backdrop"></div>
-      <div class="relative bg-zinc-900 border border-zinc-800 rounded-2xl p-6 w-full max-w-md space-y-4">
-        <h3 class="font-display text-lg font-semibold text-white">Modifier</h3>
+      <div class="relative bg-surface border border-white/10 rounded-2xl p-6 w-full max-w-md space-y-4">
+        <h3 class="font-serif text-lg font-semibold text-white">Modifier</h3>
         <div>
-          <label class="block text-sm text-zinc-300 mb-1">Titre (FR)</label>
-          <input id="edit-alt-fr" type="text" class="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/20" />
+          <label class="block text-sm text-white/80 mb-1">Titre (FR)</label>
+          <input id="edit-alt-fr" type="text" class="w-full px-3 py-2 bg-surface-2 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-gold/50" />
         </div>
         <div>
-          <label class="block text-sm text-zinc-300 mb-1">Titre (EN)</label>
-          <input id="edit-alt-en" type="text" class="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/20" />
+          <label class="block text-sm text-white/80 mb-1">Titre (EN)</label>
+          <input id="edit-alt-en" type="text" class="w-full px-3 py-2 bg-surface-2 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-gold/50" />
         </div>
         <div>
-          <label class="block text-sm text-zinc-300 mb-1">Catégorie</label>
-          <select id="edit-category" class="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/20">
+          <label class="block text-sm text-white/80 mb-1">Catégorie</label>
+          <select id="edit-category" class="w-full px-3 py-2 bg-surface-2 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-gold/50">
             <option value="men">Homme</option>
             <option value="women">Femme</option>
             <option value="braids">Tresses</option>
@@ -61,15 +61,15 @@ import AdminLayout from "../../layouts/AdminLayout.astro";
           </select>
         </div>
         <div class="flex gap-3 pt-2">
-          <button id="modal-cancel" class="flex-1 py-2 text-sm rounded-lg bg-zinc-800 text-zinc-300 hover:bg-zinc-700 transition-colors">Annuler</button>
-          <button id="modal-save" class="flex-1 py-2 text-sm rounded-lg bg-white text-zinc-900 font-medium hover:bg-zinc-200 transition-colors">Enregistrer</button>
+          <button id="modal-cancel" class="flex-1 py-2 text-sm rounded-lg bg-surface-2 text-white/80 hover:bg-surface-2 transition-colors">Annuler</button>
+          <button id="modal-save" class="flex-1 py-2 text-sm rounded-lg bg-gold text-background font-semibold hover:bg-gold-light transition-colors">Enregistrer</button>
         </div>
       </div>
     </div>
   </div>
 
   <style>
-    @reference "../../styles/global.css";
+    @reference "../../styles/admin.css";
     .gallery-item {
       position: relative;
       aspect-ratio: 4/5;
@@ -176,8 +176,8 @@ import AdminLayout from "../../layouts/AdminLayout.astro";
 
     function render() {
       if (items.length === 0) {
-        galleryGrid.innerHTML = `<div class="col-span-full text-center py-12 text-zinc-500 text-sm">
-          <svg class="mx-auto mb-3 text-zinc-600" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+        galleryGrid.innerHTML = `<div class="col-span-full text-center py-12 text-muted text-sm">
+          <svg class="mx-auto mb-3 text-muted" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
           Aucun média. Cliquez sur "Ajouter" pour commencer.
         </div>`;
         return;

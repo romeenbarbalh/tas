@@ -185,17 +185,17 @@ export default function DailyFinancialCard() {
   });
 
   return (
-    <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
+    <div className="bg-surface border border-white/8 rounded-2xl overflow-hidden">
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 px-6 pt-6 pb-4">
         <div>
           <h2 className="font-display text-lg font-semibold text-white">Résumé</h2>
-          <p className="text-sm text-zinc-400 mt-0.5 capitalize">{dateLabel}</p>
+          <p className="text-sm text-muted mt-0.5 capitalize">{dateLabel}</p>
         </div>
         <div className="flex items-center gap-1.5">
           <button
             onClick={prevDay}
-            className="p-2 rounded-lg hover:bg-zinc-800 transition-colors text-zinc-400 hover:text-white"
+            className="p-2 rounded-lg hover:bg-surface-2 transition-colors text-muted hover:text-white"
             aria-label="Jour précédent"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
@@ -203,14 +203,14 @@ export default function DailyFinancialCard() {
           {!isToday && (
             <button
               onClick={today}
-              className="px-3 py-1.5 text-xs font-medium rounded-lg bg-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-700 transition-colors"
+              className="px-3 py-1.5 text-xs font-medium rounded-lg bg-surface-2 text-white/80 hover:text-white hover:border-gold/40 transition-colors"
             >
               Aujourd'hui
             </button>
           )}
           <button
             onClick={nextDay}
-            className="p-2 rounded-lg hover:bg-zinc-800 transition-colors text-zinc-400 hover:text-white"
+            className="p-2 rounded-lg hover:bg-surface-2 transition-colors text-muted hover:text-white"
             aria-label="Jour suivant"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
@@ -221,16 +221,16 @@ export default function DailyFinancialCard() {
       {loading ? (
         <div className="px-6 pb-6">
           <div className="animate-pulse space-y-4">
-            <div className="h-10 bg-zinc-800 rounded-lg w-1/3" />
+            <div className="h-10 bg-surface-2 rounded-lg w-1/3" />
             <div className="grid grid-cols-2 gap-3">
               {[1, 2, 3, 4].map((i) => (
-                <div key={i} className="h-16 bg-zinc-800 rounded-lg" />
+                <div key={i} className="h-16 bg-surface-2 rounded-lg" />
               ))}
             </div>
           </div>
         </div>
       ) : !data ? (
-        <div className="px-6 pb-6 text-sm text-zinc-500 text-center py-8">
+        <div className="px-6 pb-6 text-sm text-muted text-center py-8">
           Supabase non configuré
         </div>
       ) : (
@@ -241,13 +241,13 @@ export default function DailyFinancialCard() {
               <KPI label="Chiffre d'affaires TTC" value={`${fmt(data.caTTC)} €`} color="text-emerald-400" />
               <KPI label="TVA" value={`${fmt(data.tvaTotal)} €`} color="text-amber-400" />
               <KPI label="Chiffre d'affaires HT" value={`${fmt(data.caHT)} €`} color="text-blue-400" />
-              <KPI label="Panier moyen" value={`${fmt(data.panierMoyen)} €`} color="text-zinc-200" sub={`${data.nbBookings} réservation${data.nbBookings !== 1 ? "s" : ""}`} />
+              <KPI label="Panier moyen" value={`${fmt(data.panierMoyen)} €`} color="text-white" sub={`${data.nbBookings} réservation${data.nbBookings !== 1 ? "s" : ""}`} />
             </div>
           </div>
 
           {/* Breakdown */}
           <div className="px-6 pb-4">
-            <p className="text-xs font-medium text-zinc-500 uppercase tracking-wider mb-3">Détail par catégorie</p>
+            <p className="text-xs font-medium text-muted uppercase tracking-wider mb-3">Détail par catégorie</p>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
               <BreakdownRow
                 label="Prestations"
@@ -271,7 +271,7 @@ export default function DailyFinancialCard() {
                 ttc={data.caDiversTTC}
                 ht={data.caDiversHT}
                 tvaAmt={data.tvaDivers}
-                accent="border-zinc-600"
+                accent="border-white/10"
               />
             </div>
           </div>
@@ -280,7 +280,7 @@ export default function DailyFinancialCard() {
           <div className="px-6 pb-6">
             <button
               onClick={handleExport}
-              className="w-full py-2.5 bg-zinc-800 border border-zinc-700 text-zinc-300 font-medium text-sm rounded-xl hover:bg-zinc-700 hover:text-white transition-colors flex items-center justify-center gap-2"
+              className="w-full py-2.5 bg-surface-2 border border-white/10 text-white/80 font-medium text-sm rounded-xl hover:bg-surface-2 hover:border-gold/40 hover:text-white transition-colors flex items-center justify-center gap-2"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
               Exporter les données comptables
@@ -294,10 +294,10 @@ export default function DailyFinancialCard() {
 
 function KPI({ label, value, color, sub }: { label: string; value: string; color: string; sub?: string }) {
   return (
-    <div className="bg-zinc-800/50 border border-zinc-700/50 rounded-xl p-3.5">
-      <p className="text-[11px] text-zinc-500 mb-1 leading-tight">{label}</p>
+    <div className="bg-surface-2 border border-white/10 rounded-xl p-3.5">
+      <p className="text-[11px] text-muted mb-1 leading-tight">{label}</p>
       <p className={`text-lg font-bold ${color} leading-tight`}>{value}</p>
-      {sub && <p className="text-[11px] text-zinc-500 mt-0.5">{sub}</p>}
+      {sub && <p className="text-[11px] text-muted mt-0.5">{sub}</p>}
     </div>
   );
 }
@@ -308,23 +308,23 @@ function BreakdownRow({
   label: string; tva: string; ttc: number; ht: number; tvaAmt: number; accent: string;
 }) {
   return (
-    <div className={`bg-zinc-800/50 border-l-2 ${accent} rounded-xl p-3.5 space-y-1.5`}>
+    <div className={`bg-surface-2 border-l-2 ${accent} rounded-xl p-3.5 space-y-1.5`}>
       <div className="flex items-center justify-between">
-        <span className="text-sm font-medium text-zinc-200">{label}</span>
-        <span className="text-[10px] font-medium text-zinc-500 bg-zinc-700/50 px-1.5 py-0.5 rounded">TVA {tva}</span>
+        <span className="text-sm font-medium text-white">{label}</span>
+        <span className="text-[10px] font-medium text-muted bg-surface-2 px-1.5 py-0.5 rounded">TVA {tva}</span>
       </div>
       <div className="grid grid-cols-3 gap-2 text-xs">
         <div>
-          <p className="text-zinc-500">TTC</p>
-          <p className="text-zinc-200 font-medium">{fmt(ttc)} €</p>
+          <p className="text-muted">TTC</p>
+          <p className="text-white font-medium">{fmt(ttc)} €</p>
         </div>
         <div>
-          <p className="text-zinc-500">TVA</p>
+          <p className="text-muted">TVA</p>
           <p className="text-amber-400 font-medium">{fmt(tvaAmt)} €</p>
         </div>
         <div>
-          <p className="text-zinc-500">HT</p>
-          <p className="text-zinc-200 font-medium">{fmt(ht)} €</p>
+          <p className="text-muted">HT</p>
+          <p className="text-white font-medium">{fmt(ht)} €</p>
         </div>
       </div>
     </div>
