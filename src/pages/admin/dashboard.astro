@@ -3,8 +3,7 @@ export const prerender = true;
 import AdminLayout from "../../layouts/AdminLayout.astro";
 import DailyFinancialCard from "../../components/admin/DailyFinancialCard";
 import AvailabilityManager from "../../components/admin/AvailabilityManager";
-import ScheduleManager from "../../components/admin/ScheduleManager";
-import { CalendarDays, Clock, LayoutDashboard, List, TrendingUp, Users } from "lucide-react";
+import { CalendarDays, LayoutDashboard, List, TrendingUp, Users } from "lucide-react";
 ---
 
 <AdminLayout title="Rendez-vous">
@@ -57,10 +56,6 @@ import { CalendarDays, Clock, LayoutDashboard, List, TrendingUp, Users } from "l
       <button id="tab-dispo" class="inline-flex shrink-0 items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold text-muted transition-colors hover:text-white">
         <LayoutDashboard class="h-4 w-4" />
         Disponibilités
-      </button>
-      <button id="tab-horaires" class="inline-flex shrink-0 items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold text-muted transition-colors hover:text-white">
-        <Clock class="h-4 w-4" />
-        Horaires
       </button>
     </div>
 
@@ -132,13 +127,6 @@ import { CalendarDays, Clock, LayoutDashboard, List, TrendingUp, Users } from "l
         <AvailabilityManager client:load />
       </div>
     </div>
-
-    <!-- HORAIRES VIEW -->
-    <div id="view-horaires" class="hidden">
-      <div class="rounded-2xl border border-white/8 bg-surface p-5">
-        <ScheduleManager client:load />
-      </div>
-    </div>
   </div>
 
   <style>
@@ -187,7 +175,7 @@ import { CalendarDays, Clock, LayoutDashboard, List, TrendingUp, Users } from "l
       color: #ffffff;
       border: 1px solid rgba(255, 255, 255, 0.4);
     }
-    #tab-calendar.active, #tab-resume.active, #tab-dispo.active, #tab-horaires.active {
+    #tab-calendar.active, #tab-resume.active, #tab-dispo.active {
       background-color: rgba(255, 255, 255, 0.12);
       color: #ffffff;
       border: 1px solid rgba(255, 255, 255, 0.4);
@@ -469,15 +457,13 @@ import { CalendarDays, Clock, LayoutDashboard, List, TrendingUp, Users } from "l
     const tabCal = document.getElementById("tab-calendar")!;
     const tabResume = document.getElementById("tab-resume")!;
     const tabDispo = document.getElementById("tab-dispo")!;
-    const tabHoraires = document.getElementById("tab-horaires")!;
     const viewList = document.getElementById("view-list")!;
     const viewCal = document.getElementById("view-calendar")!;
     const viewResume = document.getElementById("view-resume")!;
     const viewDispo = document.getElementById("view-dispo")!;
-    const viewHoraires = document.getElementById("view-horaires")!;
 
-    const tabs = [tabList, tabCal, tabResume, tabDispo, tabHoraires];
-    const views = [viewList, viewCal, viewResume, viewDispo, viewHoraires];
+    const tabs = [tabList, tabCal, tabResume, tabDispo];
+    const views = [viewList, viewCal, viewResume, viewDispo];
 
     function setActiveTab(active: string) {
       tabs.forEach(t => t.classList.remove("active"));
@@ -487,7 +473,6 @@ import { CalendarDays, Clock, LayoutDashboard, List, TrendingUp, Users } from "l
         calendar: [tabCal, viewCal],
         resume: [tabResume, viewResume],
         dispo: [tabDispo, viewDispo],
-        horaires: [tabHoraires, viewHoraires],
       };
       const [tab, view] = map[active] || map.list;
       tab.classList.add("active");
@@ -498,7 +483,6 @@ import { CalendarDays, Clock, LayoutDashboard, List, TrendingUp, Users } from "l
     tabCal.addEventListener("click", () => { setActiveTab("calendar"); renderCalendar(); renderDayBookings(); });
     tabResume.addEventListener("click", () => setActiveTab("resume"));
     tabDispo.addEventListener("click", () => setActiveTab("dispo"));
-    tabHoraires.addEventListener("click", () => setActiveTab("horaires"));
 
     document.getElementById("prev-month")!.addEventListener("click", () => {
       currentDate.setMonth(currentDate.getMonth() - 1);
