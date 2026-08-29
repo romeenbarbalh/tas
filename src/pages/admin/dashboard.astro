@@ -3,7 +3,8 @@ export const prerender = true;
 import AdminLayout from "../../layouts/AdminLayout.astro";
 import DailyFinancialCard from "../../components/admin/DailyFinancialCard";
 import AvailabilityManager from "../../components/admin/AvailabilityManager";
-import { CalendarDays, LayoutDashboard, List, TrendingUp, Users } from "lucide-react";
+import ServicesManager from "../../components/admin/ServicesManager";
+import { CalendarDays, LayoutDashboard, List, Scissors, TrendingUp, Users } from "lucide-react";
 ---
 
 <AdminLayout title="Rendez-vous">
@@ -56,6 +57,10 @@ import { CalendarDays, LayoutDashboard, List, TrendingUp, Users } from "lucide-r
       <button id="tab-dispo" class="inline-flex shrink-0 items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold text-muted transition-colors hover:text-white">
         <LayoutDashboard class="h-4 w-4" />
         Disponibilités
+      </button>
+      <button id="tab-services" class="inline-flex shrink-0 items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold text-muted transition-colors hover:text-white">
+        <Scissors class="h-4 w-4" />
+        Services
       </button>
     </div>
 
@@ -127,6 +132,13 @@ import { CalendarDays, LayoutDashboard, List, TrendingUp, Users } from "lucide-r
         <AvailabilityManager client:load />
       </div>
     </div>
+
+    <!-- SERVICES VIEW -->
+    <div id="view-services" class="hidden">
+      <div class="rounded-2xl border border-white/8 bg-surface p-5">
+        <ServicesManager client:load />
+      </div>
+    </div>
   </div>
 
   <style>
@@ -175,7 +187,7 @@ import { CalendarDays, LayoutDashboard, List, TrendingUp, Users } from "lucide-r
       color: #ffffff;
       border: 1px solid rgba(255, 255, 255, 0.4);
     }
-    #tab-calendar.active, #tab-resume.active, #tab-dispo.active {
+    #tab-calendar.active, #tab-resume.active, #tab-dispo.active, #tab-services.active {
       background-color: rgba(255, 255, 255, 0.12);
       color: #ffffff;
       border: 1px solid rgba(255, 255, 255, 0.4);
@@ -457,13 +469,15 @@ import { CalendarDays, LayoutDashboard, List, TrendingUp, Users } from "lucide-r
     const tabCal = document.getElementById("tab-calendar")!;
     const tabResume = document.getElementById("tab-resume")!;
     const tabDispo = document.getElementById("tab-dispo")!;
+    const tabServices = document.getElementById("tab-services")!;
     const viewList = document.getElementById("view-list")!;
     const viewCal = document.getElementById("view-calendar")!;
     const viewResume = document.getElementById("view-resume")!;
     const viewDispo = document.getElementById("view-dispo")!;
+    const viewServices = document.getElementById("view-services")!;
 
-    const tabs = [tabList, tabCal, tabResume, tabDispo];
-    const views = [viewList, viewCal, viewResume, viewDispo];
+    const tabs = [tabList, tabCal, tabResume, tabDispo, tabServices];
+    const views = [viewList, viewCal, viewResume, viewDispo, viewServices];
 
     function setActiveTab(active: string) {
       tabs.forEach(t => t.classList.remove("active"));
@@ -473,6 +487,7 @@ import { CalendarDays, LayoutDashboard, List, TrendingUp, Users } from "lucide-r
         calendar: [tabCal, viewCal],
         resume: [tabResume, viewResume],
         dispo: [tabDispo, viewDispo],
+        services: [tabServices, viewServices],
       };
       const [tab, view] = map[active] || map.list;
       tab.classList.add("active");
@@ -483,6 +498,7 @@ import { CalendarDays, LayoutDashboard, List, TrendingUp, Users } from "lucide-r
     tabCal.addEventListener("click", () => { setActiveTab("calendar"); renderCalendar(); renderDayBookings(); });
     tabResume.addEventListener("click", () => setActiveTab("resume"));
     tabDispo.addEventListener("click", () => setActiveTab("dispo"));
+    tabServices.addEventListener("click", () => setActiveTab("services"));
 
     document.getElementById("prev-month")!.addEventListener("click", () => {
       currentDate.setMonth(currentDate.getMonth() - 1);

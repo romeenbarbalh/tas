@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import { supabase, getAuthToken } from "../../lib/supabase";
 
 const BARBERS = [
@@ -11,33 +11,45 @@ const BARBERS = [
   "Pretty Little Hair",
 ];
 
-const HOURS = [
-  "09:00","09:30","10:00","10:30","11:00","11:30",
-  "12:00","12:30","13:00","13:30","14:00","14:30",
-  "15:00","15:30","16:00","16:30","17:00","17:30",
-  "18:00","18:30","19:00","19:30","20:00",
-];
+const TIME_SLOTS: string[] = (() => {
+  const s: string[] = [];
+  for (let h = 9; h < 20; h++) {
+    s.push(`${String(h).padStart(2, "0")}:00`, `${String(h).padStart(2, "0")}:30`);
+  }
+  s.push("20:00");
+  return s;
+})();
 
-interface Slot {
-  barber: string;
-  slot_date: string;
-  slot_time: string;
-  is_available: boolean;
-}
-
-interface Booking {
-  booking_time: string;
-  barber: string;
-}
+const DOW_LABELS = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
 
 interface SalonHour { day_of_week: number; open_time: string | null; close_time: string | null; is_closed: boolean; }
 interface Schedule { barber: string; day_of_week: number; start_time: string; end_time: string; is_working: boolean; }
-interface DayOff { barber: string; off_date: string; }
+interface DayOff { barber: string; off_date: string; reason?: string | null; }
+interface AvailRow { barber: string; slot_date: string; slot_time: string; is_available: boolean; }
 
-const toMin = (t: string) => {
+const toMin = (t: string | null | undefined): number => {
+  if (!t) return -1;
   const [h, m] = t.split(":").map(Number);
   return h * 60 + m;
 };
+
+const fmt = (d: Date): string =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
+const todayStr = fmt(new Date());
+
+function mondayOf(dateStr: string): string {
+  const d = new Date(dateStr + "T00:00:00");
+  const dow = (d.getDay() + 6) % 7;
+  d.setDate(d.getDate() - dow);
+  return fmt(d);
+}
+
+function addDays(dateStr: string, n: number): string {
+  const d = new Date(dateStr + "T00:00:00");
+  d.setDate(d.getDate() + n);
+  return fmt(d);
+}
 
 async function api(token: string, method: string, path: string, body?: any) {
   const res = await fetch(path, {
@@ -52,445 +64,461 @@ async function api(token: string, method: string, path: string, body?: any) {
   return res.json();
 }
 
-export default function AvailabilityManager() {
-  const [date, setDate] = useState(() => {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
-  });
-  const [slots, setSlots] = useState<Slot[]>([]);
-  const [bookings, setBookings] = useState<Booking[]>([]);
-  const [salonHour, setSalonHour] = useState<SalonHour | null>(null);
-  const [stylistSchedules, setStylistSchedules] = useState<Schedule[]>([]);
-  const [daysOff, setDaysOff] = useState<DayOff[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [copyOpen, setCopyOpen] = useState(false);
+interface SlotState { time: string; auto: boolean; booked: boolean; exception?: boolean; }
 
-  const load = useCallback(async (d: string) => {
-    setLoading(true);
+export default function AvailabilityManager() {
+  const [weekStart, setWeekStart] = useState(() => mondayOf(todayStr));
+  const [selected, setSelected] = useState(0); // dow 0..6
+  const [selectedBarber, setSelectedBarber] = useState<string>(BARBERS[0]);
+
+  const [salonHours, setSalonHours] = useState<Record<number, SalonHour>>({});
+  const [schedules, setSchedules] = useState<Record<string, Record<number, Schedule>>>({});
+  const [daysOff, setDaysOff] = useState<DayOff[]>([]);
+  const [exceptions, setExceptions] = useState<Record<string, Record<string, Map<string, boolean>>>>({}); // barber -> date -> time -> is_available
+  const [bookings, setBookings] = useState<Record<string, Record<string, string[]>>>({}); // barber -> date -> times
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [busyCell, setBusyCell] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+
+  const weekDates = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)), [weekStart]);
+
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      const token = await getAuthToken();
+      const end = addDays(weekStart, 6);
+      let data: any;
+      try {
+        data = await api(token!, "GET", "/api/schedule/");
+      } catch {
+        data = { hours: [], schedule: [], daysOff: [] };
+      }
+
+      const hMap: Record<number, SalonHour> = {};
+      (data.hours || []).forEach((h: SalonHour) => (hMap[h.day_of_week] = h));
+      setSalonHours(hMap);
+
+      const sMap: Record<string, Record<number, Schedule>> = {};
+      (data.schedule || []).forEach((s: Schedule) => {
+        sMap[s.barber] = sMap[s.barber] || {};
+        sMap[s.barber][s.day_of_week] = s;
+      });
+      setSchedules(sMap);
+
+      const off = (data.daysOff || []).filter(
+        (o: DayOff) => o.off_date >= weekStart && o.off_date <= end
+      );
+      setDaysOff(off);
+
+      // Fetch exceptions + bookings for the whole week
+      const exMap: Record<string, Record<string, Map<string, boolean>>> = {};
+      const bkMap: Record<string, Record<string, string[]>> = {};
+
+      try {
+        const daysRes = await fetch(
+          `/api/availability/?start=${weekStart}&end=${end}`
+        );
+        if (daysRes.ok) {
+          const rows: AvailRow[] = await daysRes.json();
+          rows.forEach((r) => {
+            exMap[r.barber] = exMap[r.barber] || {};
+            exMap[r.barber][r.slot_date] = exMap[r.barber][r.slot_date] || new Map();
+            exMap[r.barber][r.slot_date].set(r.slot_time, r.is_available);
+          });
+        }
+      } catch { /* ignore */ }
+
+      const { data: bks, error } = await supabase
+        .from("bookings")
+        .select("booking_date, booking_time, barber")
+        .gte("booking_date", weekStart)
+        .lte("booking_date", end)
+        .in("status", ["pending", "confirmed"]);
+      (bks || []).forEach((b: any) => {
+        bkMap[b.barber] = bkMap[b.barber] || {};
+        bkMap[b.barber][b.booking_date] = bkMap[b.barber][b.booking_date] || [];
+        bkMap[b.barber][b.booking_date].push(b.booking_time);
+      });
+      if (error) console.error(error);
+
+      setExceptions(exMap);
+      setBookings(bkMap);
+      setLoading(false);
+    };
+    load();
+  }, [weekStart]);
+
+  // Compute the state of each slot for a given barber + date (smart engine)
+  const computeDay = (barber: string, dateStr: string): SlotState[] => {
+    const dow = (new Date(dateStr + "T00:00:00").getDay() + 6) % 7;
+    const h = salonHours[dow];
+    const s = schedules[barber]?.[dow];
+    const isOff = daysOff.some((o) => o.barber === barber && o.off_date === dateStr);
+    const dayExc = exceptions[barber]?.[dateStr] || new Map<string, boolean>();
+    const dayBks = new Set(bookings[barber]?.[dateStr] || []);
+
+    const salonOpen = !!(h && !h.is_closed && h.open_time && h.close_time);
+    const openMin = salonOpen ? toMin(h!.open_time) : -1;
+    const closeMin = salonOpen ? toMin(h!.close_time) : -1;
+    const working = !!(s && s.is_working);
+    const wsMin = working ? toMin(s!.start_time) : -1;
+    const weMin = working ? toMin(s!.end_time) : -1;
+
+    return TIME_SLOTS.map((t) => {
+      const tm = toMin(t);
+      const booked = dayBks.has(t);
+      if (booked) return { time: t, auto: false, booked: true };
+
+      // Manual exception wins if present
+      if (dayExc.has(t)) {
+        return { time: t, auto: false, exception: dayExc.get(t) };
+      }
+
+      // Auto (rule-driven): open only if salon open AND stylist working AND within both ranges AND not off
+      const open =
+        !isOff &&
+        salonOpen &&
+        working &&
+        tm >= openMin &&
+        tm < closeMin &&
+        tm >= wsMin &&
+        tm < weMin;
+
+      return { time: t, auto: true, exception: open };
+    });
+  };
+
+  const daySummary = (barber: string, dateStr: string) => {
+    const slots = computeDay(barber, dateStr);
+    const open = slots.filter((s) => !s.booked && s.exception).length;
+    const booked = slots.filter((s) => s.booked).length;
+    const closed = slots.filter((s) => !s.booked && !s.exception).length;
+    return { open, booked, closed };
+  };
+
+  const selectedDate = weekDates[selected];
+  const selectedSlots = useMemo(
+    () => computeDay(selectedBarber, selectedDate),
+    [selectedBarber, selectedDate, salonHours, schedules, daysOff, exceptions, bookings]
+  );
+  const openCount = selectedSlots.filter((s) => !s.booked && s.exception).length;
+
+  const toggleSlot = async (time: string) => {
+    const s = selectedSlots.find((x) => x.time === time);
+    if (!s || s.booked) return;
+
     const token = await getAuthToken();
     if (!token) return;
 
-    const dow = (new Date(d + "T00:00:00").getDay() + 6) % 7; // Mon=0
-
-    // Load availability (layer 3 manual blocks)
-    const res = await fetch(`/api/availability/?date=${d}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    if (res.ok) setSlots(await res.json());
-
-    // Load bookings for this date
-    const { data } = await supabase
-      .from("bookings")
-      .select("booking_time, barber")
-      .eq("booking_date", d)
-      .in("status", ["pending", "confirmed"]);
-    setBookings((data as Booking[]) || []);
-
-    // Load salon hours + stylist schedules + days off (layers 1 & 2)
-    try {
-      const data2 = await api(token, "GET", "/api/schedule/");
-      setSalonHour((data2.hours || []).find((h: SalonHour) => h.day_of_week === dow) || null);
-      setStylistSchedules(data2.schedule || []);
-      setDaysOff((data2.daysOff || []).filter((o: DayOff) => o.off_date === d));
-    } catch (e) {
-      console.error("Error loading schedule:", e);
-    }
-
-    setLoading(false);
-  }, []);
-
-  useEffect(() => { load(date); }, [date, load]);
-
-  // Layer 1 + 2 helpers
-  const isSalonOpen = salonHour && !salonHour.is_closed && salonHour.open_time && salonHour.close_time;
-  const isStylistWorking = (barber: string) => {
-    const off = daysOff.some((o) => o.barber === barber);
-    if (off) return false;
-    const s = stylistSchedules.find((x) => x.barber === barber);
-    if (!s) return true; // no schedule set -> assume available
-    return s.is_working;
-  };
-  const stylistRange = (barber: string): [number, number] => {
-    const s = stylistSchedules.find((x) => x.barber === barber);
-    if (s && s.is_working) return [toMin(s.start_time), toMin(s.end_time)];
-    return [-1, -1];
-  };
-
-  const isBooked = (barber: string, time: string) =>
-    bookings.some((b) => b.barber === barber && b.booking_time === time);
-
-  const getSlot = (barber: string, time: string) =>
-    slots.find((s) => s.barber === barber && s.slot_time === time);
-
-  const toggleSlot = async (barber: string, time: string) => {
-    if (isBooked(barber, time)) return;
-    const existing = getSlot(barber, time);
-    const newVal = existing ? !existing.is_available : true;
-
-    // Optimistic update
-    const prevSlots = [...slots];
-    setSlots((prev) => {
-      const idx = prev.findIndex((s) => s.barber === barber && s.slot_time === time);
-      if (idx >= 0) {
-        const next = [...prev];
-        next[idx] = { ...next[idx], is_available: newVal };
-        return next;
-      }
-      return [...prev, { barber, slot_date: date, slot_time: time, is_available: newVal }];
-    });
-
-    try {
-      const token = await getAuthToken();
-      if (!token) { setSlots(prevSlots); return; }
-
-      const res = await fetch("/api/availability/", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ barber, slot_date: date, slot_time: time, is_available: newVal }),
-      });
-      if (!res.ok) {
-        const err = await res.json();
-        console.error("Availability save error:", err);
-        setSlots(prevSlots);
-        alert("Erreur: " + (err.error || "Impossible de sauvegarder"));
-        return;
-      }
-      // Re-fetch to confirm
-      load(date);
-    } catch (e) {
-      console.error("Availability fetch error:", e);
-      setSlots(prevSlots);
-      alert("Erreur de connexion. RÃ©essayez.");
-    }
-  };
-
-  const toggleRow = async (barber: string, available: boolean) => {
     setSaving(true);
-    const newSlots = HOURS.map((h) => ({ barber, slot_date: date, slot_time: h, is_available: available }));
-
-    // Optimistic
-    const prevSlots = [...slots];
-    setSlots((prev) => {
-      const filtered = prev.filter((s) => s.barber !== barber);
-      return [...filtered, ...newSlots];
-    });
+    // current effective open state = exception (if present) else auto
+    const curOpen = s.exception ?? s.auto;
+    const newOpen = !curOpen;
 
     try {
-      const token = await getAuthToken();
-      if (!token) { setSlots(prevSlots); setSaving(false); return; }
-
-      const res = await fetch("/api/availability/", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ slots: newSlots }),
+      await api(token, "PUT", "/api/availability/", {
+        barber: selectedBarber,
+        slot_date: selectedDate,
+        slot_time: time,
+        is_available: newOpen,
       });
-      if (!res.ok) {
-        const err = await res.json();
-        console.error("Availability row save error:", err);
-        setSlots(prevSlots);
-        alert("Erreur: " + (err.error || "Impossible de sauvegarder"));
-      } else {
-        load(date);
+      // reload exceptions for this barber/date
+      const res = await fetch(`/api/availability/?start=${selectedDate}&end=${selectedDate}`);
+      if (res.ok) {
+        const rows: AvailRow[] = await res.json();
+        const m = new Map<string, boolean>();
+        rows
+          .filter((r) => r.barber === selectedBarber)
+          .forEach((r) => m.set(r.slot_time, r.is_available));
+        setExceptions((prev) => {
+          const b = { ...prev };
+          b[selectedBarber] = { ...(b[selectedBarber] || {}), [selectedDate]: m };
+          return b;
+        });
       }
-    } catch (e) {
-      console.error("Availability row fetch error:", e);
-      setSlots(prevSlots);
+      setMessage("Enregistré");
+    } catch (e: any) {
+      alert("Erreur: " + e.message);
     }
     setSaving(false);
   };
 
-  const toggleAll = async (available: boolean) => {
+  const setWholeDay = async (open: boolean) => {
+    const token = await getAuthToken();
+    if (!token) return;
     setSaving(true);
-    const allSlots = BARBERS.flatMap((b) =>
-      HOURS.map((h) => ({ barber: b, slot_date: date, slot_time: h, is_available: available }))
-    );
-
-    const prevSlots = [...slots];
-    setSlots(allSlots);
-
+    const slots = TIME_SLOTS.map((t) => ({
+      barber: selectedBarber,
+      slot_date: selectedDate,
+      slot_time: t,
+      is_available: open,
+    }));
     try {
-      const token = await getAuthToken();
-      if (!token) { setSlots(prevSlots); setSaving(false); return; }
-
-      const res = await fetch("/api/availability/", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ slots: allSlots }),
-      });
-      if (!res.ok) {
-        const err = await res.json();
-        console.error("Availability bulk save error:", err);
-        setSlots(prevSlots);
-        alert("Erreur: " + (err.error || "Impossible de sauvegarder"));
-      } else {
-        load(date);
+      await api(token, "POST", "/api/availability/", { slots });
+      const res = await fetch(`/api/availability/?start=${selectedDate}&end=${selectedDate}`);
+      if (res.ok) {
+        const rows: AvailRow[] = await res.json();
+        const m = new Map<string, boolean>();
+        rows
+          .filter((r) => r.barber === selectedBarber)
+          .forEach((r) => m.set(r.slot_time, r.is_available));
+        setExceptions((prev) => {
+          const b = { ...prev };
+          b[selectedBarber] = { ...(b[selectedBarber] || {}), [selectedDate]: m };
+          return b;
+        });
       }
-    } catch (e) {
-      console.error("Availability bulk fetch error:", e);
-      setSlots(prevSlots);
+      setMessage(open ? "Journée ouverte" : "Journée fermée");
+    } catch (e: any) {
+      alert("Erreur: " + e.message);
     }
     setSaving(false);
   };
 
-  const resetAll = async () => {
+  const resetDay = async () => {
+    const token = await getAuthToken();
+    if (!token) return;
     setSaving(true);
-    const prevSlots = [...slots];
-    setSlots([]);
-
     try {
-      const token = await getAuthToken();
-      if (!token) { setSlots(prevSlots); setSaving(false); return; }
-
       const res = await fetch("/api/availability/", {
         method: "DELETE",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ slot_date: date }),
+        body: JSON.stringify({ slot_date: selectedDate, barber: selectedBarber }),
       });
-      if (!res.ok) {
-        const err = await res.json();
-        console.error("Availability reset error:", err);
-        setSlots(prevSlots);
-        alert("Erreur: " + (err.error || "Impossible de rÃ©initialiser"));
+      if (!res.ok) throw new Error("FAIL");
+      setExceptions((prev) => {
+        const b = { ...prev };
+        if (b[selectedBarber]) delete b[selectedBarber][selectedDate];
+        return b;
+      });
+      setMessage("Réinitialisé (auto)");
+    } catch (e: any) {
+      alert("Erreur: " + e.message);
+    }
+    setSaving(false);
+  };
+
+  // Bulk: apply rules to the whole week (write auto-open slots as available to the public site)
+  const applyWeekRules = async () => {
+    if (!confirm("Appliquer les règles (horaires + planning) à toute la semaine ?")) return;
+    const token = await getAuthToken();
+    if (!token) return;
+    setSaving(true);
+    const slots: any[] = [];
+    weekDates.forEach((dateStr) => {
+      BARBERS.forEach((barber) => {
+        computeDay(barber, dateStr)
+          .filter((s) => !s.booked && s.exception)
+          .forEach((s) =>
+            slots.push({ barber, slot_date: dateStr, slot_time: s.time, is_available: true })
+          );
+      });
+    });
+    if (slots.length === 0) {
+      alert("Aucune ouverture générée — vérifiez les horaires du salon et le planning des coiffeurs.");
+      setSaving(false);
+      return;
+    }
+    try {
+      await api(token, "POST", "/api/availability/", { slots });
+      // reload exceptions
+      const res = await fetch(`/api/availability/?start=${weekStart}&end=${addDays(weekStart, 6)}`);
+      if (res.ok) {
+        const rows: AvailRow[] = await res.json();
+        const exMap: Record<string, Record<string, Map<string, boolean>>> = {};
+        rows.forEach((r) => {
+          exMap[r.barber] = exMap[r.barber] || {};
+          exMap[r.barber][r.slot_date] = exMap[r.barber][r.slot_date] || new Map();
+          exMap[r.barber][r.slot_date].set(r.slot_time, r.is_available);
+        });
+        setExceptions(exMap);
       }
-    } catch (e) {
-      console.error("Availability reset error:", e);
-      setSlots(prevSlots);
+      setMessage("Règles appliquées à la semaine");
+    } catch (e: any) {
+      alert("Erreur: " + e.message);
     }
     setSaving(false);
   };
 
-  const copyDay = async (targetDate: string) => {
-    setSaving(true);
-    const copySlots = slots.map((s) => ({
-      ...s,
-      slot_date: targetDate,
-    }));
-
-    const token = await getAuthToken();
-    if (!token) { setSaving(false); return; }
-
-    await fetch("/api/availability/", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ slots: copySlots }),
-    });
-    setCopyOpen(false);
-    setSaving(false);
-  };
-
-  const goTo = (delta: number) => {
-    const d = new Date(date + "T00:00:00");
-    d.setDate(d.getDate() + delta);
-    setDate(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`);
-  };
-
-  const dayName = new Date(date + "T00:00:00").toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
-
-  const [weekMode, setWeekMode] = useState(false);
-  const [weekStart, setWeekStart] = useState(date);
-
-  // Copy whole week from current day
-  const copyWeek = async () => {
-    setSaving(true);
-    const baseDate = new Date(date + "T00:00:00");
-    const allCopies = [];
-
-    for (let i = 0; i < 7; i++) {
-      const target = new Date(baseDate);
-      target.setDate(target.getDate() + i);
-      const td = `${target.getFullYear()}-${String(target.getMonth()+1).padStart(2,"0")}-${String(target.getDate()).padStart(2,"0")}`;
-
-      const daySlots = slots.map((s) => ({
-        ...s,
-        slot_date: td,
-      }));
-      allCopies.push(...daySlots);
-    }
-
-    const token = await getAuthToken();
-    if (!token) { setSaving(false); return; }
-
-    await fetch("/api/availability/", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ slots: allCopies }),
-    });
-    setSaving(false);
-  };
+  const isPast = weekStart < mondayOf(todayStr);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <button onClick={() => goTo(-1)} className="p-2 rounded-lg hover:bg-surface-2 text-muted hover:text-white transition-colors">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6"/></svg>
-          </button>
-          <span className="text-sm font-medium text-white capitalize min-w-[180px] text-center">{dayName}</span>
-          <button onClick={() => goTo(1)} className="p-2 rounded-lg hover:bg-surface-2 text-muted hover:text-white transition-colors">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>
-          </button>
-          <input
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            className="ml-2 bg-surface-2 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white cursor-pointer"
-          />
-        </div>
-
-        <div className="flex gap-2 flex-wrap">
-          <button onClick={() => toggleAll(true)} disabled={saving}
-            className="px-3 py-1.5 text-xs font-medium rounded-lg bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25 transition-colors disabled:opacity-50">
-            Tout ouvrir
-          </button>
-          <button onClick={() => toggleAll(false)} disabled={saving}
-            className="px-3 py-1.5 text-xs font-medium rounded-lg bg-red-500/15 text-red-400 hover:bg-red-500/25 transition-colors disabled:opacity-50">
-            Tout fermer
-          </button>
-          <button onClick={resetAll} disabled={saving}
-            className="px-3 py-1.5 text-xs font-medium rounded-lg bg-gold/10 text-gold hover:bg-gold/20 hover:text-gold-light transition-colors disabled:opacity-50">
-            Tout Non dÃ©fini
-          </button>
-          <div className="relative">
-            <button onClick={() => setCopyOpen(!copyOpen)}
-              className="px-3 py-1.5 text-xs font-medium rounded-lg bg-surface-2 text-white/80 hover:border-gold/40 hover:text-white transition-colors">
-              Copier ce jour â–¾
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <button onClick={() => setWeekStart((w) => addDays(w, -7))} className="grid h-9 w-9 place-items-center rounded-lg border border-white/10 text-muted transition-colors hover:bg-surface-2 hover:text-white">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
             </button>
-            {copyOpen && (
-              <div className="absolute right-0 top-full mt-1 bg-surface-2 border border-white/10 rounded-xl shadow-xl z-20 overflow-hidden min-w-[200px]">
-                <button onClick={() => { const d = new Date(date + "T00:00:00"); d.setDate(d.getDate() + 1); copyDay(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`); }}
-                  className="w-full text-left px-4 py-2.5 text-sm text-white/80 hover:bg-surface-2 transition-colors">
-                  â†’ Demain
-                </button>
-                <button onClick={() => { const d = new Date(date + "T00:00:00"); d.setDate(d.getDate() + 7); copyDay(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`); }}
-                  className="w-full text-left px-4 py-2.5 text-sm text-white/80 hover:bg-surface-2 transition-colors">
-                  â†’ Dans 7 jours
-                </button>
-                <button onClick={copyWeek}
-                  className="w-full text-left px-4 py-2.5 text-sm text-white/80 hover:bg-surface-2 transition-colors border-t border-white/10">
-                  â†’ Copier la semaine complÃ¨te
-                </button>
-                <button onClick={() => setCopyOpen(false)}
-                  className="w-full text-left px-4 py-2.5 text-sm text-muted hover:bg-surface-2 transition-colors border-t border-white/10">
-                  Annuler
-                </button>
-              </div>
-            )}
+            <div className="text-center">
+              <p className="font-serif text-sm font-semibold text-white">
+                {weekDates[0].split("-").reverse().join("/")} – {weekDates[6].split("-").reverse().join("/")}
+              </p>
+              <p className="text-[11px] text-muted">Semaine du {weekDates[0]}</p>
+            </div>
+            <button onClick={() => setWeekStart((w) => addDays(w, 7))} className="grid h-9 w-9 place-items-center rounded-lg border border-white/10 text-muted transition-colors hover:bg-surface-2 hover:text-white">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            </button>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <button onClick={() => setWeekStart(mondayOf(todayStr))} className="rounded-full border border-white/10 px-3 py-1.5 text-xs font-medium text-muted transition-colors hover:bg-surface-2 hover:text-white">
+              Aujourd'hui
+            </button>
+            <button onClick={applyWeekRules} disabled={saving || loading}
+              className="rounded-full bg-white px-3.5 py-1.5 text-xs font-semibold text-black transition-colors hover:bg-white/90 disabled:opacity-50"
+              title="Calcule les ouvertures selon les horaires + planning et l'applique aux clients">
+              Â» Appliquer les rÃ¨gles
+            </button>
           </div>
         </div>
       </div>
 
       {/* Legend */}
-      <div className="flex flex-wrap gap-4 text-xs text-muted">
-        <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-emerald-500/30 border border-emerald-500/50"></span> Disponible</span>
-        <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-red-500/30 border border-red-500/50"></span> FermÃ© (bloquÃ©)</span>
-        <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-surface-2 border border-white/10"></span> Non dÃ©fini</span>
-        <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-amber-500/30 border border-amber-500/50"></span> RÃ©servÃ©</span>
-        <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-surface border border-dashed border-white/10"></span> Hors salon</span>
-        <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-indigo-500/20 border border-dashed border-indigo-500/40"></span> Styliste absent</span>
+      <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-[11px] text-muted">
+        <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm border border-white/50 bg-white/20"></span> Ouvert (rÃ¨gle)</span>
+        <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm border border-white/10 bg-surface-2"></span> FermÃ©</span>
+        <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm border border-dashed border-white/30"></span> Plusieurs crÃ©neaux</span>
+        <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm border border-white/40 bg-white/60"></span> RÃ©servÃ©</span>
       </div>
 
-      {!isSalonOpen && (
-        <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl px-4 py-3 text-sm text-amber-300">
-          âš ï¸ Le salon est fermÃ© ce jour ({new Date(date + "T00:00:00").toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}).
-          Aucune rÃ©servation ne sera possible.
-        </div>
-      )}
-
-      {loading ? (
-        <div className="text-center py-12 text-muted text-sm">Chargement...</div>
-      ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse">
-            <thead>
-              <tr>
-                <th className="text-left text-xs font-medium text-muted px-2 py-2 min-w-[140px]">Coiffeur</th>
-                {HOURS.map((h) => (
-                  <th key={h} className="text-center text-[10px] font-medium text-muted px-0.5 py-2 min-w-[44px]">{h}</th>
-                ))}
-                <th className="text-center text-xs font-medium text-muted px-2 py-2 min-w-[60px]">Row</th>
+      {/* Weekly matrix */}
+      <div className="overflow-x-auto rounded-2xl border border-white/8">
+        <table className="w-full border-collapse text-sm">
+          <thead>
+            <tr className="border-b border-white/8">
+              <th className="w-44 px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted">Coiffeur</th>
+              {DOW_LABELS.map((d, i) => {
+                const active = i === selected && !loading;
+                const ds = weekDates[i];
+                return (
+                  <th key={d} className={`px-2 py-2.5 text-center ${active ? "bg-surface-2 text-white" : "text-muted"} ${ds === todayStr ? "text-gold" : ""}`}>
+                    <button onClick={() => setSelected(i)} className="mx-auto block">
+                      <span className="block text-[10px] font-medium uppercase tracking-wide">{d}</span>
+                      <span className="mt-0.5 block font-serif text-sm font-semibold">
+                        {ds === todayStr ? "Auj." : ds.split("-")[2]}
+                      </span>
+                    </button>
+                  </th>
+                );
+              })}
+            </tr>
+          </thead>
+          <tbody>
+            {BARBERS.map((barber) => (
+              <tr key={barber} className="border-b border-white/8 last:border-0">
+                <td className="px-4 py-2 font-medium text-white/85">{barber}</td>
+                {weekDates.map((ds, i) => {
+                  const sum = daySummary(barber, ds);
+                  const isSel = i === selected && barber === selectedBarber;
+                  let chip;
+                  let cls = "bg-surface text-muted";
+                  if (sum.open === 0 && sum.booked === 0) {
+                    chip = "FermÃ©";
+                  } else if (sum.booked === 0 && sum.closed === 0) {
+                    chip = `${sum.open}h`;
+                    cls = "bg-white text-black";
+                  } else if (sum.closed === 0) {
+                    chip = `${sum.open}h · ${sum.booked} r`;
+                    cls = "bg-white/80 text-black";
+                  } else if (sum.open > 0 && sum.closed > 0) {
+                    chip = `${sum.open}h · ${sum.booked} r · ${sum.closed} f`;
+                    cls = "bg-white/15 text-white border border-dashed border-white/25";
+                  } else if (sum.booked > 0) {
+                    chip = `${sum.booked} r`;
+                    cls = "bg-white text-black";
+                  }
+                  return (
+                    <td key={ds} className="px-2 py-2 text-center">
+                      <button
+                        disabled={busyCell}
+                        onClick={() => { setSelected(i); setSelectedBarber(barber); }}
+                        className={`inline-flex w-full items-center justify-center rounded-lg px-2 py-2 text-[11px] font-semibold transition-colors ${cls} ${isSel ? "ring-2 ring-white/60" : ""} ${isPast && ds < todayStr ? "opacity-40" : ""}`}
+                      >
+                        {chip}
+                      </button>
+                    </td>
+                  );
+                })}
               </tr>
-            </thead>
-            <tbody>
-              {BARBERS.map((barber) => (
-                <tr key={barber} className="border-t border-white/8">
-                  <td className="px-2 py-1.5 text-xs font-medium text-white/80 whitespace-nowrap">{barber}</td>
-                  {HOURS.map((h) => {
-                    const slot = getSlot(barber, h);
-                    const booked = isBooked(barber, h);
-                    const tMin = toMin(h);
+            ))}
+          </tbody>
+        </table>
+      </div>
 
-                    // Layer 1: salon closed or outside salon hours
-                    const outsideSalon = !isSalonOpen ||
-                      (isSalonOpen && (tMin < toMin(isSalonOpen.open_time!) || tMin >= toMin(isSalonOpen.close_time!)));
-                    // Layer 2: stylist off-duty / outside their range
-                    const stylistOff = !isStylistWorking(barber);
-                    const [sStart, sEnd] = stylistRange(barber);
-                    const outsideStylist = stylistOff || (tMin < sStart || tMin >= sEnd);
-
-let bg = "bg-surface-2 hover:border-gold/40";
-    let border = "border-white/10";
-                    let disabled = false;
-                    let title = "Non dÃ©fini";
-
-                    if (booked) {
-                      bg = "bg-amber-500/20";
-                      border = "border-amber-500/40";
-                      disabled = true;
-                      title = "RÃ©servÃ©";
-                    } else if (outsideSalon) {
-                      bg = "bg-surface border-dashed";
-                      border = "border-white/8";
-                      disabled = true;
-                      title = "Hors horaires du salon";
-                    } else if (outsideStylist) {
-                      bg = "bg-indigo-500/10 border-dashed";
-                      border = "border-indigo-500/30";
-                      disabled = true;
-                      title = "Styliste absent / hors planning";
-                    } else if (slot?.is_available) {
-                      bg = "bg-emerald-500/20 hover:bg-emerald-500/30";
-                      border = "border-emerald-500/40";
-                      title = "Disponible â€” cliquer pour fermer";
-                    } else if (slot && !slot.is_available) {
-                      bg = "bg-red-500/15 hover:bg-red-500/25";
-                      border = "border-red-500/30";
-                      title = "FermÃ© â€” cliquer pour ouvrir";
-                    }
-                    return (
-                      <td key={h} className="px-0.5 py-1">
-                        <button
-                          onClick={() => (booked || outsideSalon || outsideStylist) ? undefined : toggleSlot(barber, h)}
-                          disabled={disabled}
-                          title={title}
-                          className={`w-full h-8 rounded border transition-all duration-100 ${bg} ${border} ${disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}
-                        />
-                      </td>
-                    );
-                  })}
-                  <td className="px-1 py-1">
-                    <div className="flex gap-0.5 justify-center">
-                      <button onClick={() => toggleRow(barber, true)} disabled={saving}
-                        className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25 transition-colors"
-                        title="Tout ouvrir pour ce coiffeur">âœ“</button>
-                      <button onClick={() => toggleRow(barber, false)} disabled={saving}
-                        className="text-[10px] px-1.5 py-0.5 rounded bg-red-500/15 text-red-400 hover:bg-red-500/25 transition-colors"
-                        title="Tout fermer pour ce coiffeur">âœ—</button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      {/* Day editor */}
+      <div className="rounded-2xl border border-white/8 bg-surface p-5">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="font-serif text-base font-semibold text-white">
+              {selectedBarber}
+            </p>
+            <p className="text-xs capitalize text-muted">
+              {new Date(selectedDate + "T00:00:00").toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}
+            </p>
+            <p className="mt-1 text-[11px] text-muted">
+              {openCount} crÃ©neau{x(openCount)} ouverts
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button onClick={() => setWholeDay(true)} disabled={saving}
+              className="rounded-full border border-white/20 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-white/10 disabled:opacity-50">
+              Ouvrir tout
+            </button>
+            <button onClick={() => setWholeDay(false)} disabled={saving}
+              className="rounded-full border border-white/20 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-white/10 disabled:opacity-50">
+              Fermer tout
+            </button>
+            <button onClick={resetDay} disabled={saving}
+              className="rounded-full border border-white/10 px-3 py-1.5 text-xs font-medium text-muted transition-colors hover:bg-surface-2 hover:text-white disabled:opacity-50">
+              RÃ©initialiser
+            </button>
+          </div>
         </div>
-      )}
 
+        <div className="flex flex-wrap gap-1.5">
+          {selectedSlots.map((s) => {
+            let cls = "border-white/10 bg-surface-2 text-muted hover:bg-surface";
+            let title = "Fermé (hors horaires / jour off)";
+            if (s.booked) {
+              cls = "border-white/25 bg-white/60 text-black cursor-not-allowed";
+              title = "Réservé";
+            } else if (s.exception) {
+              cls = "border-white/40 bg-white text-black hover:bg-white/80";
+              title = "Ouvert — cliquer pour fermer";
+            }
+            return (
+              <button
+                key={s.time}
+                onClick={() => toggleSlot(s.time)}
+                disabled={saving || s.booked || busyCell}
+                title={title}
+                className={`rounded-lg border px-2.5 py-1.5 text-[11px] font-medium transition-colors disabled:opacity-60 ${s.booked ? "cursor-not-allowed" : "cursor-pointer"} ${cls}`}
+              >
+                {s.time}
+              </button>
+            );
+          })}
+        </div>
+        <p className="mt-3 text-[11px] text-muted">
+          Les crÃ©neaux blancs sont calculÃ©s automatiquement selon les horaires du salon et le planning du coiffeur.
+          Cliquez pour crÃ©er une exception manuelle (ou la retirer).
+        </p>
+      </div>
+
+      {message && <p className="text-xs text-emerald-400">{message}</p>}
+      {loading && <p className="text-center py-10 text-sm text-muted">Chargement...</p>}
       {saving && (
-        <div className="fixed bottom-4 right-4 bg-surface-2 border border-white/10 rounded-xl px-4 py-2 text-sm text-white/80 shadow-xl z-50">
-          Sauvegarde...
+        <div className="fixed bottom-4 right-4 rounded-xl border border-white/10 bg-surface-2 px-4 py-2 text-sm text-white/80 shadow-xl z-50">
+          Enregistrement...
         </div>
       )}
     </div>
   );
+}
+
+function x(n: number): string {
+  return n > 1 ? "x" : "";
 }

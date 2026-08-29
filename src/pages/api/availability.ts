@@ -23,7 +23,7 @@ async function verifyUser(request: Request) {
   return user;
 }
 
-// GET /api/availability?date=2026-08-25
+// GET /api/availability?date=2026-08-25 | ?start=2026-08-25&end=2026-08-31
 export const GET: APIRoute = async ({ request }) => {
   const user = await verifyUser(request);
   if (!user) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
@@ -31,15 +31,21 @@ export const GET: APIRoute = async ({ request }) => {
   try {
     const url = new URL(request.url);
     const date = url.searchParams.get("date");
-    if (!date) return new Response(JSON.stringify({ error: "date required" }), { status: 400 });
+    const start = url.searchParams.get("start");
+    const end = url.searchParams.get("end");
 
     const supa = adminClient();
-    const { data, error } = await supa
-      .from("availability")
-      .select("*")
-      .eq("slot_date", date)
-      .order("barber")
-      .order("slot_time");
+    let query = supa.from("availability").select("*");
+
+    if (start && end) {
+      query = query.gte("slot_date", start).lte("slot_date", end);
+    } else if (date) {
+      query = query.eq("slot_date", date);
+    } else {
+      return new Response(JSON.stringify({ error: "date (or start/end) required" }), { status: 400 });
+    }
+
+    const { data, error } = await query.order("barber").order("slot_time");
 
     if (error) return new Response(JSON.stringify({ error: error.message }), { status: 400 });
     return new Response(JSON.stringify(data), { status: 200 });

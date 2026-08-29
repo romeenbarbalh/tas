@@ -7,6 +7,10 @@ const { locale, t } = Astro.props;
 import { services, categories } from "../../utils/constants";
 import ServiceCard from "../ui/ServiceCard.astro";
 
+const categoryIds = categories.map(c => c.id);
+const labelMap: Record<string, { fr: string; en: string }> = {};
+for (const c of categories) labelMap[c.id] = c.label;
+
 const servicesByCategory: Record<string, typeof services> = {};
 for (const cat of categories) {
   servicesByCategory[cat.id] = services.filter(s => s.category === cat.id);
@@ -171,4 +175,135 @@ const MOBILE_PAGE_SIZE = 3;
       }
     }, { passive: true });
   });
+</script>
+
+<script define:vars={{ labelMap, locale }}>
+  // ── Dynamic services from Supabase (fallback on static SSR content) ──
+  const categoryLabels = labelMap;
+  const MOBILE_PAGE_SIZE = 3;
+
+  function esc(str) {
+    return String(str ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  }
+  function catLabel(catId) {
+    const l = categoryLabels[catId] || {};
+    return l[locale] || catId;
+  }
+  function badgeLabel(catId) {
+    if (catId === "men") return "Barbier";
+    if (catId === "women") return "Coiffure";
+    return "Tresses";
+  }
+
+  function initCarousel(panel) {
+    const carousel = panel.querySelector('[data-carousel-panel]');
+    if (!carousel) return;
+    const catId = carousel.dataset.carouselPanel;
+    const scroll = carousel.querySelector('.overflow-x-auto');
+    const dotsContainer = carousel.querySelector(`[data-carousel-dots="${catId}"]`);
+    if (!scroll || !dotsContainer) return;
+    const pages = scroll.querySelectorAll('.snap-start');
+    const dots = dotsContainer.querySelectorAll('[data-dot]');
+    let current = 0;
+    scroll.addEventListener('scroll', () => {
+      const scrollLeft = scroll.scrollLeft;
+      const pageWidth = pages[0]?.offsetWidth || 1;
+      const newCurrent = Math.round(scrollLeft / pageWidth);
+      if (newCurrent !== current && newCurrent >= 0 && newCurrent < pages.length) {
+        current = newCurrent;
+        dots.forEach((dot, i) => {
+          if (i === current) {
+            dot.classList.add('bg-gold', 'w-4');
+            dot.classList.remove('bg-border');
+          } else {
+            dot.classList.remove('bg-gold', 'w-4');
+            dot.classList.add('bg-border');
+          }
+        });
+      }
+    }, { passive: true });
+  }
+
+  function cardHTML(s, idx) {
+    const desc = (s.description && s.description[locale]) || "";
+    return `<article class="card group animate-in stagger-${(idx % 7) + 1}">
+      <div class="p-2.5 md:p-6">
+        <div class="mb-1 md:mb-3">
+          <span class="text-[9px] md:text-xs inline-flex items-center rounded-full px-1.5 py-0.5 md:px-3 md:py-1 font-medium bg-gold/10 text-gold border border-gold/20">${badgeLabel(s.category)}</span>
+        </div>
+        <div class="flex flex-col gap-0.5 md:flex-row md:items-start md:justify-between md:gap-4 mb-1 md:mb-2">
+          <h3 class="text-xs md:heading-sm text-text group-hover:text-gold transition-colors leading-snug line-clamp-2">${esc(s.name[locale])}</h3>
+          <span class="font-display font-bold text-xs md:text-lg text-gold whitespace-nowrap">${esc(s.priceEur)}</span>
+        </div>
+        <div class="flex items-center gap-3 mb-1.5 md:mb-4 text-[10px] md:text-sm text-text-muted">
+          <span class="flex items-center gap-0.5 md:gap-1">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+            ${esc(s.duration[locale] || "")}
+          </span>
+        </div>
+        <p class="text-xs md:text-sm text-text-muted mb-2 md:mb-4 line-clamp-2 hidden md:block">${esc(desc)}</p>
+        <a href="#booking" class="text-[10px] md:text-sm w-full justify-center group-hover:border-gold/50 group-hover:text-gold transition-all inline-flex items-center gap-1 rounded-lg px-2 py-1 md:px-6 md:py-3 font-semibold bg-bg-elevated text-text border border-border hover:bg-bg-card hover:border-gold/50" data-service="${esc(s.id)}">
+          ${locale === "fr" ? "Réserver" : "Book"}
+        </a>
+      </div>
+    </article>`;
+  }
+
+  function renderPanels(servicesList) {
+    const byCat = {};
+    for (const s of servicesList) {
+      if (!byCat[s.category]) byCat[s.category] = [];
+      byCat[s.category].push(s);
+    }
+    for (const cat of Object.keys(categoryLabels)) {
+      const panel = document.querySelector(`[data-panel="${cat}"]`);
+      if (!panel) continue;
+      const list = byCat[cat] || [];
+      const desktop = panel.querySelector(".hidden.md\\:grid");
+      const mobileWrap = panel.querySelector(".md\\:hidden");
+
+      if (desktop) {
+        desktop.innerHTML = list.map(cardHTML).join("");
+      }
+      if (mobileWrap) {
+        const pages = [];
+        for (let p = 0; p < list.length; p += MOBILE_PAGE_SIZE) pages.push(list.slice(p, p + MOBILE_PAGE_SIZE));
+        const dots = pages.length > 1
+          ? `<div class="flex items-center justify-center gap-1.5 mt-3" data-carousel-dots="${cat}">
+               ${pages.map((_, i) => `<span class="w-1.5 h-1.5 rounded-full transition-all duration-300 ${i === 0 ? "bg-gold w-4" : "bg-border"}" data-dot="${i}"></span>`).join("")}
+             </div>`
+          : "";
+        mobileWrap.innerHTML = `<div class="overflow-x-auto snap-x snap-mandatory flex gap-3 scrollbar-none pb-2 -mx-1 px-1">
+            ${pages.map(page => `<div class="snap-start shrink-0 w-[88%] last:w-full"><div class="grid grid-cols-2 gap-2.5">${page.map(cardHTML).join("")}</div></div>`).join("")}
+          </div>${dots}`;
+      }
+      initCarousel(panel);
+    }
+
+    // rebind service buttons
+    document.querySelectorAll('[data-service]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const id = btn.getAttribute('data-service');
+        const booking = document.getElementById('booking');
+        if (booking) {
+          booking.scrollIntoView({ behavior: 'smooth' });
+          setTimeout(() => window.dispatchEvent(new CustomEvent('arc:select-service', { detail: id })), 500);
+        }
+      });
+    });
+  }
+
+  (async function loadServices() {
+    try {
+      const res = await fetch('/api/services/', { headers: { Accept: 'application/json' } });
+      if (!res.ok) return;
+      const json = await res.json();
+      if (json && Array.isArray(json.services) && json.services.length) {
+        renderPanels(json.services);
+      }
+    } catch {
+      // keep static SSR content
+    }
+  })();
 </script>

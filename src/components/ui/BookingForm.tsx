@@ -357,6 +357,23 @@ export default function BookingForm({ locale, services, team }: Props) {
   const [status, setStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
   const [filteredBarbers, setFilteredBarbers] = useState<TeamMember[]>(team);
   const [availableSlots, setAvailableSlots] = useState<string[]>(TIME_SLOTS);
+  const [serviceList, setServiceList] = useState<Service[]>(services);
+
+  // Fetch services from Supabase (fallback on static prop)
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch("/api/services/", { headers: { Accept: "application/json" } });
+        if (!res.ok) return;
+        const json = await res.json();
+        if (json && Array.isArray(json.services) && json.services.length) {
+          setServiceList(json.services as Service[]);
+        }
+      } catch {
+        // keep static prop
+      }
+    })();
+  }, []);
 
   // Listen for pre-select from ServiceCard
   useEffect(() => {
@@ -436,7 +453,7 @@ export default function BookingForm({ locale, services, team }: Props) {
     setSelectedServices((prev) => prev.filter((s) => s !== id));
   }, []);
 
-  const selectedServiceObjects = services.filter((s) => selectedServices.includes(s.id));
+  const selectedServiceObjects = serviceList.filter((s) => selectedServices.includes(s.id));
 
   const total = selectedServiceObjects.reduce(
     (acc, s) => {
@@ -504,7 +521,7 @@ export default function BookingForm({ locale, services, team }: Props) {
   };
 
   const serviceOptions: MsOpt[] = CATEGORIES.flatMap((cat) =>
-    services
+    serviceList
       .filter((s) => s.category === cat.id)
       .map((s) => ({
         value: s.id,
