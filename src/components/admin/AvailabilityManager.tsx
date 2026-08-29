@@ -76,6 +76,7 @@ export default function AvailabilityManager() {
   const [daysOff, setDaysOff] = useState<DayOff[]>([]);
   const [exceptions, setExceptions] = useState<Record<string, Record<string, Map<string, boolean>>>>({});
   const [bookings, setBookings] = useState<Record<string, Record<string, string[]>>>({});
+  const [bookingClients, setBookingClients] = useState<Record<string, Record<string, Record<string, string>>>>({});
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ type: "ok" | "err"; text: string } | null>(null);
@@ -107,21 +108,19 @@ export default function AvailabilityManager() {
 
       const exMap: Record<string, Record<string, Map<string, boolean>>> = {};
       const bkMap: Record<string, Record<string, string[]>> = {};
+      const bkClients: Record<string, Record<string, Record<string, string>>> = {};
       try {
-        const daysRes = await fetch(`/api/availability/?start=${weekStart}&end=${end}`);
-        if (daysRes.ok) {
-          const rows: AvailRow[] = await daysRes.json();
-          rows.forEach((r) => {
-            exMap[r.barber] = exMap[r.barber] || {};
-            exMap[r.barber][r.slot_date] = exMap[r.barber][r.slot_date] || new Map();
-            exMap[r.barber][r.slot_date].set(r.slot_time, r.is_available);
-          });
-        }
+        const rows: AvailRow[] = await api(token!, "GET", `/api/availability/?start=${weekStart}&end=${end}`);
+        rows.forEach((r) => {
+          exMap[r.barber] = exMap[r.barber] || {};
+          exMap[r.barber][r.slot_date] = exMap[r.barber][r.slot_date] || new Map();
+          exMap[r.barber][r.slot_date].set(r.slot_time, r.is_available);
+        });
       } catch { /* ignore */ }
 
       const { data: bks, error } = await supabase
         .from("bookings")
-        .select("booking_date, booking_time, barber")
+        .select("booking_date, booking_time, barber, client_name")
         .gte("booking_date", weekStart)
         .lte("booking_date", end)
         .in("status", ["pending", "confirmed"]);
@@ -131,12 +130,16 @@ export default function AvailabilityManager() {
           bkMap[b.barber] = bkMap[b.barber] || {};
           bkMap[b.barber][b.booking_date] = bkMap[b.barber][b.booking_date] || [];
           bkMap[b.barber][b.booking_date].push(b.booking_time);
+          bkClients[b.barber] = bkClients[b.barber] || {};
+          bkClients[b.barber][b.booking_date] = bkClients[b.barber][b.booking_date] || {};
+          bkClients[b.barber][b.booking_date][b.booking_time] = b.client_name || "Réservé";
         });
       }
       if (error) console.error(error);
 
       setExceptions(exMap);
       setBookings(bkMap);
+      setBookingClients(bkClients);
       setLoading(false);
     };
     load();
@@ -243,9 +246,8 @@ export default function AvailabilityManager() {
         slot_time: time,
         is_available: !s.open,
       });
-      const res = await fetch(`/api/availability/?start=${selDate}&end=${selDate}`);
-      if (res.ok) {
-        const rows: AvailRow[] = await res.json();
+      try {
+        const rows: AvailRow[] = await api(token, "GET", `/api/availability/?start=${selDate}&end=${selDate}`);
         const m = new Map<string, boolean>();
         rows.filter((r) => r.barber === selBarber).forEach((r) => m.set(r.slot_time, r.is_available));
         setExceptions((prev) => {
@@ -253,7 +255,7 @@ export default function AvailabilityManager() {
           b[selBarber] = { ...(b[selBarber] || {}), [selDate]: m };
           return b;
         });
-      }
+      } catch { /* ignore */ }
       setMessage({ type: "ok", text: "Enregistré" });
     } catch (e: any) {
       setMessage({ type: "err", text: e.message });
@@ -282,9 +284,8 @@ export default function AvailabilityManager() {
     }
     try {
       await api(token, "POST", "/api/availability/", { slots });
-      const res = await fetch(`/api/availability/?start=${weekStart}&end=${addDays(weekStart, 6)}`);
-      if (res.ok) {
-        const rows: AvailRow[] = await res.json();
+      try {
+        const rows: AvailRow[] = await api(token, "GET", `/api/availability/?start=${weekStart}&end=${addDays(weekStart, 6)}`);
         const exMap: Record<string, Record<string, Map<string, boolean>>> = {};
         rows.forEach((r) => {
           exMap[r.barber] = exMap[r.barber] || {};
@@ -292,7 +293,7 @@ export default function AvailabilityManager() {
           exMap[r.barber][r.slot_date].set(r.slot_time, r.is_available);
         });
         setExceptions(exMap);
-      }
+      } catch { /* ignore */ }
       setMessage({ type: "ok", text: "Règles appliquées à toute la semaine" });
     } catch (e: any) {
       setMessage({ type: "err", text: e.message });
@@ -338,7 +339,7 @@ export default function AvailabilityManager() {
         <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm border border-white/50 bg-white"></span> Ouvert</span>
         <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm border border-white/10 bg-surface-2"></span> Fermé</span>
         <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm border border-dashed border-white/30 bg-white/15"></span> Mixte</span>
-        <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm border border-white/40 bg-white/60"></span> Réservé</span>
+        <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-amber-400/60"></span> Réservé (client)</span>
       </div>
 
       {/* Weekly matrix */}
@@ -435,11 +436,20 @@ export default function AvailabilityManager() {
         </div>
         <div className="flex flex-wrap gap-1.5">
           {selectedSlots.map((s) => {
+            const clientName = bookingClients[selBarber]?.[selDate]?.[s.time];
             let cls = "border-white/10 bg-surface-2 text-muted hover:bg-surface";
-            let title = "Fermé";
+            let title = "Fermé — cliquer pour ouvrir";
+            let tag: React.ReactNode = null;
             if (s.booked) {
-              cls = "border-white/25 bg-white/60 text-black cursor-not-allowed";
-              title = "Réservé";
+              cls = "border-amber-400/50 bg-amber-400/20 text-amber-100 cursor-not-allowed";
+              title = `Réservé — ${clientName || "client"} (${s.time})`;
+              tag = (
+                <>
+                  <span className="mr-1 inline-block h-1.5 w-1.5 rounded-full bg-amber-400 align-middle" />
+                  <span className="align-middle">{s.time}</span>
+                  <span className="block text-[9px] font-normal opacity-90">{clientName || "Réservé"}</span>
+                </>
+              );
             } else if (s.open) {
               cls = "border-white/40 bg-white text-black hover:bg-white/80";
               title = "Ouvert — cliquer pour fermer";
@@ -450,9 +460,9 @@ export default function AvailabilityManager() {
                 onClick={() => toggleSlot(s.time)}
                 disabled={busy || s.booked}
                 title={title}
-                className={`rounded-lg border px-2.5 py-1.5 text-[11px] font-medium transition-colors disabled:opacity-60 ${s.booked ? "cursor-not-allowed" : "cursor-pointer"} ${cls}`}
+                className={`rounded-lg border px-2.5 py-1.5 text-[11px] font-medium transition-colors disabled:opacity-80 ${s.booked ? "cursor-not-allowed" : "cursor-pointer"} ${cls}`}
               >
-                {s.time}
+                {tag || s.time}
               </button>
             );
           })}
